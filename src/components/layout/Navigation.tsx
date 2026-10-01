@@ -1,18 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { motion, useScroll, useMotionValueEvent } from 'framer-motion'
-import { Github, Menu, X } from 'lucide-react'
+import { Github, Menu, X, Globe } from 'lucide-react'
 import { scrollTo } from '@/hooks/useLenis'
 import { cn } from '@/lib/utils'
-
-const navLinks = [
-  { label: 'Why Lenis', href: '#why' },
-  { label: 'Features', href: '#features' },
-  { label: 'Install', href: '#install' },
-  { label: 'Showcase', href: '#showcase' },
-  { label: 'Performance', href: '#performance' },
-]
+import { useLanguage } from '@/i18n'
 
 export default function Navigation() {
+  const { language, t, toggleLanguage } = useLanguage()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const { scrollY } = useScroll()
@@ -20,6 +14,14 @@ export default function Navigation() {
   useMotionValueEvent(scrollY, 'change', (v) => {
     setScrolled(v > 40)
   })
+
+  const navLinks = [
+    { label: t.nav.why, href: '#why' },
+    { label: t.nav.features, href: '#features' },
+    { label: t.nav.install, href: '#install' },
+    { label: t.nav.showcase, href: '#showcase' },
+    { label: t.nav.performance, href: '#performance' },
+  ]
 
   const handleNav = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault()
@@ -53,7 +55,7 @@ export default function Navigation() {
               className="flex items-center gap-2.5 group"
               onClick={(e) => { e.preventDefault(); scrollTo(0) }}
             >
-              <div className="relative">
+              <div className="relative shrink-0">
                 <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
                   <path d="M6 10 Q10 6 16 10 Q22 14 26 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" className="group-hover:stroke-purple-400 transition-colors duration-300" />
                   <path d="M6 16 Q10 12 16 16 Q22 20 26 16" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.6" className="group-hover:stroke-purple-400 transition-colors duration-300" />
@@ -61,19 +63,19 @@ export default function Navigation() {
                 </svg>
               </div>
               <span className="font-bold text-white text-lg tracking-tight group-hover:text-white/80 transition-colors">
-                lenis
+                {language === 'ar' ? 'الجيل العربي' : 'lenis'}
               </span>
-              <span className="hidden sm:flex tag text-[10px] px-1.5 py-0.5">v1.3.4</span>
+              <span className="hidden sm:flex tag text-[10px] px-1.5 py-0.5 dir-ltr" dir="ltr">v1.3.4</span>
             </a>
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-1">
               {navLinks.map((link) => (
                 <a
-                  key={link.label}
+                  key={link.href}
                   href={link.href}
                   onClick={(e) => handleNav(e, link.href)}
-                  className="px-4 py-2 text-sm text-white/50 hover:text-white/90 rounded-xl hover:bg-white/5 transition-all duration-200"
+                  className="px-4 py-2 text-sm text-white/60 hover:text-white rounded-xl hover:bg-white/5 transition-all duration-200"
                 >
                   {link.label}
                 </a>
@@ -82,14 +84,26 @@ export default function Navigation() {
 
             {/* Right actions */}
             <div className="flex items-center gap-2">
+              {/* Language Switcher */}
+              <button
+                type="button"
+                onClick={toggleLanguage}
+                aria-label={t.nav.switchLanguage}
+                title={t.nav.switchLanguage}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Globe size={13} className="text-accent-cyan shrink-0" />
+                <span>{t.nav.targetLanguageName}</span>
+              </button>
+
               <a
                 href="https://github.com/abdellahaarab/lenis"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-all duration-200"
+                className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-all duration-200"
               >
                 <Github size={15} />
-                <span className="font-mono text-xs">14.2K</span>
+                <span className="font-mono text-xs dir-ltr" dir="ltr">14.2K</span>
               </a>
 
               <a
@@ -97,13 +111,13 @@ export default function Navigation() {
                 onClick={(e) => handleNav(e, '#install')}
                 className="btn-primary text-xs px-4 py-2 hidden sm:flex"
               >
-                Get Started
+                {t.nav.getStarted}
               </a>
 
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="md:hidden p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all"
-                aria-label="Toggle menu"
+                className="md:hidden p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                aria-label={t.nav.toggleMenu}
               >
                 {mobileOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
@@ -123,22 +137,38 @@ export default function Navigation() {
         )}
       >
         <nav className="flex flex-col gap-2">
+          {/* Mobile Language Switcher Row */}
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <span className="text-xs text-white/40">{language === 'ar' ? 'اللغة' : 'Language'}</span>
+            <button
+              type="button"
+              onClick={() => {
+                toggleLanguage()
+                setMobileOpen(false)
+              }}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-white transition-all"
+            >
+              <Globe size={13} className="text-accent-cyan" />
+              <span>{t.nav.targetLanguageName}</span>
+            </button>
+          </div>
+
           {navLinks.map((link) => (
             <a
-              key={link.label}
+              key={link.href}
               href={link.href}
               onClick={(e) => handleNav(e, link.href)}
-              className="px-4 py-3 text-white/70 hover:text-white rounded-xl hover:bg-white/5 transition-all"
+              className="px-4 py-3 text-white/70 hover:text-white rounded-xl hover:bg-white/5 transition-all text-start"
             >
               {link.label}
             </a>
           ))}
-          <div className="h-px bg-white/10 my-2" />
+          <div className="h-px bg-white/10 my-1" />
           <a
             href="https://github.com/abdellahaarab/lenis"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-3 text-white/70 hover:text-white rounded-xl hover:bg-white/5 transition-all"
+            className="flex items-center gap-2 px-4 py-3 text-white/70 hover:text-white rounded-xl hover:bg-white/5 transition-all text-start"
           >
             <Github size={16} />
             GitHub

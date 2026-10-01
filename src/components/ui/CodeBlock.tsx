@@ -10,7 +10,7 @@ interface CodeBlockProps {
   showLineNumbers?: boolean
 }
 
-const tokenize = (code: string, language: string) => {
+const tokenize = (code: string, _language: string) => {
   const keywords = ['import', 'from', 'export', 'default', 'const', 'let', 'var', 'function', 'return', 'new', 'class', 'extends', 'await', 'async', 'if', 'else', 'for', 'while', 'of', 'in', 'true', 'false', 'null', 'undefined', 'type', 'interface', 'enum']
   const lines = code.split('\n')
 
@@ -52,7 +52,7 @@ export default function CodeBlock({ code, language = 'js', filename, className, 
   const lines = highlighted.split('\n')
 
   return (
-    <div className={cn('relative group rounded-2xl overflow-hidden', className)}>
+    <div className={cn('relative group rounded-2xl overflow-hidden dir-ltr text-left', className)} dir="ltr">
       <div className="absolute inset-0 bg-white/4 border border-white/8 rounded-2xl" />
 
       {filename && (
@@ -63,7 +63,7 @@ export default function CodeBlock({ code, language = 'js', filename, className, 
               <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
               <div className="w-3 h-3 rounded-full bg-green-500/60" />
             </div>
-            <span className="font-mono text-xs text-white/40 ml-2">{filename}</span>
+            <span className="font-mono text-xs text-white/40 ms-2">{filename}</span>
           </div>
           <span className="text-xs text-white/30 font-mono uppercase">{language}</span>
         </div>
@@ -72,23 +72,23 @@ export default function CodeBlock({ code, language = 'js', filename, className, 
       <div className="relative overflow-auto">
         <button
           onClick={copy}
-          className="absolute top-3 right-3 z-10 p-2 rounded-lg bg-white/6 hover:bg-white/12 border border-white/8 text-white/40 hover:text-white/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
+          className="absolute top-3 end-3 z-10 p-2 rounded-lg bg-white/6 hover:bg-white/12 border border-white/8 text-white/40 hover:text-white/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
           aria-label="Copy code"
         >
           {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
         </button>
 
-        <pre className="relative px-5 py-5 overflow-x-auto">
+        <pre className="relative px-5 py-5 overflow-x-auto text-left font-mono" dir="ltr">
           <table className="w-full border-collapse">
             <tbody>
               {lines.map((line, i) => (
                 <tr key={i}>
                   {showLineNumbers && (
-                    <td className="pr-4 text-right text-white/20 font-mono text-sm select-none w-8 shrink-0">
+                    <td className="pe-4 text-right text-white/20 font-mono text-sm select-none w-8 shrink-0">
                       {i + 1}
                     </td>
                   )}
-                  <td className="font-mono text-sm text-white/80 w-full">
+                  <td className="font-mono text-sm text-white/80 w-full text-left">
                     <code dangerouslySetInnerHTML={{ __html: line || '&nbsp;' }} />
                   </td>
                 </tr>
@@ -101,7 +101,7 @@ export default function CodeBlock({ code, language = 'js', filename, className, 
   )
 }
 
-export function InlineCode({ children }: { children: string }) {
+export function InlineCode({ children, className }: { children: string; className?: string }) {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -113,7 +113,11 @@ export function InlineCode({ children }: { children: string }) {
   return (
     <button
       onClick={copy}
-      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-mono text-sm bg-white/5 hover:bg-white/8 border border-white/10 text-white/80 transition-all duration-200 group"
+      className={cn(
+        'inline-flex items-center gap-2 px-4 py-2 rounded-xl font-mono text-sm bg-white/5 hover:bg-white/8 border border-white/10 text-white/80 transition-all duration-200 group dir-ltr text-left',
+        className
+      )}
+      dir="ltr"
     >
       <span className="text-green-400/80">$</span>
       <span>{children}</span>

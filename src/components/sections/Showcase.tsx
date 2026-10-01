@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
+import { useLanguage } from '@/i18n'
 
 const showcaseItems = [
   { name: 'Basement Studio', category: 'Agency', color: '#1a1a2e' },
@@ -16,10 +17,11 @@ const row1 = [...showcaseItems, ...showcaseItems]
 const row2 = [...showcaseItems.slice(4), ...showcaseItems.slice(0, 4), ...showcaseItems.slice(4), ...showcaseItems.slice(0, 4)]
 
 export default function Showcase() {
+  const { t, dir } = useLanguage()
   const sectionRef = useRef<HTMLElement>(null)
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start end', 'end start'] })
-  const x1 = useTransform(scrollYProgress, [0, 1], ['0%', '-10%'])
-  const x2 = useTransform(scrollYProgress, [0, 1], ['-5%', '5%'])
+  const x1 = useTransform(scrollYProgress, [0, 1], dir === 'rtl' ? ['0%', '10%'] : ['0%', '-10%'])
+  const x2 = useTransform(scrollYProgress, [0, 1], dir === 'rtl' ? ['5%', '-5%'] : ['-5%', '5%'])
 
   return (
     <section ref={sectionRef} className="relative py-32 overflow-hidden" id="showcase">
@@ -31,30 +33,30 @@ export default function Showcase() {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="text-center"
         >
-          <span className="tag mb-4 inline-flex">Showcase</span>
-          <h2 className="text-[clamp(36px,5vw,72px)] font-black tracking-tight leading-none mb-6">
-            Trusted by the world's
+          <span className="tag mb-4 inline-flex">{t.showcase.tag}</span>
+          <h2 className="text-[clamp(36px,5vw,72px)] font-black tracking-tight leading-tight mb-6">
+            {t.showcase.titleLine1}
             <br />
-            <span className="gradient-text">best creative teams.</span>
+            <span className="gradient-text">{t.showcase.titleLine2}</span>
           </h2>
           <p className="text-white/50 text-lg max-w-lg mx-auto">
-            From agency studios to Fortune 500 companies — Lenis powers the scroll experience.
+            {t.showcase.subtitle}
           </p>
         </motion.div>
       </div>
 
-      {/* Marquee rows */}
-      <div className="space-y-4 overflow-hidden">
+      {/* Marquee rows (ltr track wrapper for reliable physical conveyor movement) */}
+      <div className="space-y-4 overflow-hidden dir-ltr" dir="ltr">
         {/* Row 1 — left */}
         <motion.div style={{ x: x1 }} className="flex gap-4 w-[200%]">
           <div className="animate-marquee flex gap-4 shrink-0">
             {row1.map((item, i) => (
-              <ShowcaseCard key={`r1a-${i}`} {...item} />
+              <ShowcaseCard key={`r1a-${i}`} {...item} dir={dir} />
             ))}
           </div>
           <div className="animate-marquee flex gap-4 shrink-0" aria-hidden>
             {row1.map((item, i) => (
-              <ShowcaseCard key={`r1b-${i}`} {...item} />
+              <ShowcaseCard key={`r1b-${i}`} {...item} dir={dir} />
             ))}
           </div>
         </motion.div>
@@ -63,12 +65,12 @@ export default function Showcase() {
         <motion.div style={{ x: x2 }} className="flex gap-4 w-[200%]">
           <div className="animate-marquee-reverse flex gap-4 shrink-0">
             {row2.map((item, i) => (
-              <ShowcaseCard key={`r2a-${i}`} {...item} variant="small" />
+              <ShowcaseCard key={`r2a-${i}`} {...item} variant="small" dir={dir} />
             ))}
           </div>
           <div className="animate-marquee-reverse flex gap-4 shrink-0" aria-hidden>
             {row2.map((item, i) => (
-              <ShowcaseCard key={`r2b-${i}`} {...item} variant="small" />
+              <ShowcaseCard key={`r2b-${i}`} {...item} variant="small" dir={dir} />
             ))}
           </div>
         </motion.div>
@@ -81,8 +83,8 @@ export default function Showcase() {
   )
 }
 
-function ShowcaseCard({ name, category, color, variant = 'default' }: {
-  name: string; category: string; color: string; variant?: 'default' | 'small'
+function ShowcaseCard({ name, category, color, variant = 'default', dir }: {
+  name: string; category: string; color: string; variant?: 'default' | 'small'; dir: 'rtl' | 'ltr'
 }) {
   const isSmall = variant === 'small'
 
@@ -90,7 +92,8 @@ function ShowcaseCard({ name, category, color, variant = 'default' }: {
     <motion.div
       whileHover={{ scale: 1.03, y: -4 }}
       transition={{ duration: 0.3 }}
-      className={`shrink-0 glass rounded-2xl overflow-hidden cursor-pointer group ${isSmall ? 'w-52 h-32' : 'w-72 h-44'}`}
+      dir={dir}
+      className={`shrink-0 glass rounded-2xl overflow-hidden cursor-pointer group text-start ${isSmall ? 'w-52 h-32' : 'w-72 h-44'}`}
     >
       {/* Colored preview */}
       <div
@@ -108,16 +111,16 @@ function ShowcaseCard({ name, category, color, variant = 'default' }: {
 
         {/* Content */}
         <div className="relative z-10">
-          <div className="text-xs text-white/30 mb-1 font-mono">{category}</div>
-          <div className="font-semibold text-white/80 group-hover:text-white transition-colors text-sm">
+          <div className="text-xs text-white/40 mb-1 font-mono">{category}</div>
+          <div className="font-semibold text-white/85 group-hover:text-white transition-colors text-sm">
             {name}
           </div>
         </div>
 
-        {/* Arrow */}
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-1 group-hover:translate-x-0">
+        {/* Arrow (top end of card) */}
+        <div className="absolute top-3 end-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
           <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-            <span className="text-xs text-white">↗</span>
+            <span className="text-xs text-white leading-none">{dir === 'rtl' ? '↖' : '↗'}</span>
           </div>
         </div>
       </div>

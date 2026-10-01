@@ -6,24 +6,28 @@ import { Github, ArrowRight, BookOpen } from 'lucide-react'
 import { InlineCode } from '@/components/ui/CodeBlock'
 import GradientOrb from '@/components/ui/GradientOrb'
 import Particles from '@/components/ui/Particles'
+import { useLanguage } from '@/i18n'
 
 gsap.registerPlugin(SplitText)
 
 export default function FinalCTA() {
+  const { t, language } = useLanguage()
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
       if (!headingRef.current) return
-      const split = new SplitText(headingRef.current, { type: 'chars' })
+      const splitType = language === 'ar' ? 'words' : 'chars'
+      const split = new SplitText(headingRef.current, { type: splitType })
+      const targets = language === 'ar' ? split.words : split.chars
 
       gsap.fromTo(
-        split.chars,
-        { y: 60, opacity: 0 },
+        targets,
+        { y: 50, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          stagger: 0.02,
+          stagger: language === 'ar' ? 0.08 : 0.02,
           duration: 0.8,
           ease: 'power3.out',
           scrollTrigger: {
@@ -35,13 +39,13 @@ export default function FinalCTA() {
       )
     })
     return () => ctx.revert()
-  }, [])
+  }, [language])
 
   return (
     <section className="relative py-40 overflow-hidden text-center">
       <GradientOrb color="purple" size="xl" className="left-1/2 -translate-x-1/2 -bottom-40 opacity-20" />
-      <GradientOrb color="blue" size="md" className="-left-20 top-0 opacity-10" />
-      <GradientOrb color="cyan" size="md" className="-right-20 top-0 opacity-10" />
+      <GradientOrb color="blue" size="md" className="-start-20 top-0 opacity-10" />
+      <GradientOrb color="cyan" size="md" className="-end-20 top-0 opacity-10" />
       <Particles count={60} />
 
       {/* Grid */}
@@ -58,17 +62,17 @@ export default function FinalCTA() {
           transition={{ duration: 0.6 }}
           className="mb-8"
         >
-          <span className="tag">Ready to ship</span>
+          <span className="tag">{t.finalCta.tag}</span>
         </motion.div>
 
         <div className="overflow-hidden mb-8">
           <h2
             ref={headingRef}
-            className="text-[clamp(48px,8vw,100px)] font-black leading-none tracking-[-0.04em]"
+            className="text-[clamp(44px,7vw,96px)] font-black leading-tight tracking-tight"
           >
-            Start scrolling
+            {t.finalCta.titleLine1}
             <br />
-            <span className="gradient-text-aurora">beautifully.</span>
+            <span className="gradient-text-aurora">{t.finalCta.titleLine2}</span>
           </h2>
         </div>
 
@@ -79,8 +83,7 @@ export default function FinalCTA() {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="text-white/50 text-xl mb-12 max-w-2xl mx-auto leading-relaxed"
         >
-          One package install. Zero configuration required.
-          Your scroll transforms in under a minute.
+          {t.finalCta.subtitle}
         </motion.p>
 
         <motion.div
@@ -90,7 +93,9 @@ export default function FinalCTA() {
           transition={{ duration: 0.7, delay: 0.4 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10"
         >
-          <InlineCode>npm install lenis</InlineCode>
+          <div className="dir-ltr" dir="ltr">
+            <InlineCode>npm install lenis</InlineCode>
+          </div>
 
           <a
             href="https://github.com/abdellahaarab/lenis"
@@ -99,18 +104,18 @@ export default function FinalCTA() {
             className="btn-secondary"
           >
             <Github size={16} />
-            View on GitHub
+            <span>{t.finalCta.github}</span>
           </a>
 
           <a
             href="https://pro-lenis.vercel.app"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-secondary"
+            className="btn-secondary group"
           >
             <BookOpen size={16} />
-            Documentation
-            <ArrowRight size={14} />
+            <span>{t.finalCta.docs}</span>
+            <ArrowRight size={14} className="rtl:rotate-180 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
           </a>
         </motion.div>
 
@@ -119,9 +124,9 @@ export default function FinalCTA() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="text-xs text-white/20"
+          className="text-xs text-white/30"
         >
-          MIT License · No attribution required · Forever free
+          {t.finalCta.license}
         </motion.p>
       </div>
 

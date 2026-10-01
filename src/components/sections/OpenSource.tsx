@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Github, GitBranch, Star, Users, Package, ExternalLink } from 'lucide-react'
 import GradientOrb from '@/components/ui/GradientOrb'
+import { useLanguage } from '@/i18n'
 
 const contributors = Array.from({ length: 32 }, (_, i) => ({
   id: i,
@@ -8,21 +9,23 @@ const contributors = Array.from({ length: 32 }, (_, i) => ({
   initial: String.fromCharCode(65 + (i % 26)),
 }))
 
-const releases = [
-  { version: '1.3.4', date: 'Jun 2025', label: 'Latest', highlight: true, note: 'Infinite scroll support' },
-  { version: '1.2.0', date: 'Mar 2025', label: '', note: 'Touch gesture improvements' },
-  { version: '1.1.1', date: 'Jan 2025', label: '', note: 'GSAP 3.12 compat' },
-  { version: '1.0.0', date: 'Sep 2024', label: 'Stable', note: 'Initial stable release' },
-]
-
-const stats = [
-  { icon: Star, value: '14.2K', label: 'Stars', color: 'text-yellow-400' },
-  { icon: GitBranch, value: '230', label: 'Forks', color: 'text-blue-400' },
-  { icon: Users, value: '48', label: 'Contributors', color: 'text-green-400' },
-  { icon: Package, value: '620K', label: 'Weekly DL', color: 'text-purple-400' },
-]
-
 export default function OpenSource() {
+  const { t } = useLanguage()
+
+  const stats = [
+    { icon: Star, value: '14.2K', label: t.openSource.stats.stars, color: 'text-yellow-400' },
+    { icon: GitBranch, value: '230', label: t.openSource.stats.forks, color: 'text-blue-400' },
+    { icon: Users, value: '48', label: t.openSource.stats.contributors, color: 'text-green-400' },
+    { icon: Package, value: '620K', label: t.openSource.stats.weeklyDl, color: 'text-purple-400' },
+  ]
+
+  const communityLinks = [
+    { label: t.openSource.links.github, href: 'https://github.com/abdellahaarab/lenis', icon: '⭐' },
+    { label: t.openSource.links.liveDemo, href: 'https://pro-lenis.vercel.app', icon: '🌐' },
+    { label: t.openSource.links.twitter, href: 'https://twitter.com/abdellahaarab', icon: '𝕏' },
+    { label: t.openSource.links.npm, href: 'https://www.npmjs.com/package/lenis', icon: '📦' },
+  ]
+
   return (
     <section className="relative py-32 overflow-hidden" id="open-source">
       <GradientOrb color="multi" size="lg" className="left-1/2 -translate-x-1/2 bottom-0 opacity-8" />
@@ -36,16 +39,16 @@ export default function OpenSource() {
           className="text-center mb-20"
         >
           <span className="tag mb-4 inline-flex">
-            <Github size={12} />
-            Open Source
+            <Github size={12} className="shrink-0" />
+            <span>{t.openSource.tag}</span>
           </span>
-          <h2 className="text-[clamp(36px,5vw,72px)] font-black tracking-tight leading-none mb-6">
-            Built in the open,
+          <h2 className="text-[clamp(36px,5vw,72px)] font-black tracking-tight leading-tight mb-6">
+            {t.openSource.titleLine1}
             <br />
-            <span className="gradient-text">by the community.</span>
+            <span className="gradient-text">{t.openSource.titleLine2}</span>
           </h2>
           <p className="text-white/50 text-lg max-w-xl mx-auto">
-            MIT licensed. No vendor lock-in. Forever free.
+            {t.openSource.subtitle}
           </p>
         </motion.div>
 
@@ -63,14 +66,14 @@ export default function OpenSource() {
                 className="glass rounded-2xl p-6 text-center"
               >
                 <Icon size={18} className={`${stat.color} mx-auto mb-3`} />
-                <div className="text-3xl font-black text-white mb-1">{stat.value}</div>
+                <div className="text-3xl font-black text-white mb-1 font-mono dir-ltr" dir="ltr">{stat.value}</div>
                 <div className="text-xs text-white/40">{stat.label}</div>
               </motion.div>
             )
           })}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8 text-start">
           {/* Contributors */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -79,8 +82,8 @@ export default function OpenSource() {
             transition={{ duration: 0.7 }}
             className="glass rounded-2xl p-8"
           >
-            <h3 className="font-semibold text-white/80 mb-6">Contributors</h3>
-            <div className="flex flex-wrap gap-2 mb-6">
+            <h3 className="font-semibold text-white/80 mb-6">{t.openSource.contributorsTitle}</h3>
+            <div className="flex flex-wrap gap-2 mb-6 dir-ltr" dir="ltr">
               {contributors.map((c) => (
                 <motion.div
                   key={c.id}
@@ -100,10 +103,10 @@ export default function OpenSource() {
               href="https://github.com/abdellahaarab/lenis/graphs/contributors"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors"
             >
-              View all contributors
-              <ExternalLink size={12} />
+              <span>{t.openSource.viewAllContributors}</span>
+              <ExternalLink size={12} className="rtl:rotate-180" />
             </a>
           </motion.div>
 
@@ -115,26 +118,26 @@ export default function OpenSource() {
             transition={{ duration: 0.7 }}
             className="glass rounded-2xl p-8"
           >
-            <h3 className="font-semibold text-white/80 mb-6">Release Timeline</h3>
+            <h3 className="font-semibold text-white/80 mb-6">{t.openSource.releaseTimeline}</h3>
             <div className="space-y-4 relative">
-              <div className="absolute left-[11px] top-2 bottom-2 w-px bg-white/10" />
-              {releases.map((release, i) => (
+              <div className="absolute start-[11px] top-2 bottom-2 w-px bg-white/10" />
+              {t.openSource.releases.map((release, i) => (
                 <div key={i} className="flex items-start gap-4 relative">
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 z-10 ${
-                    release.highlight
+                    i === 0
                       ? 'bg-accent-purple border-accent-purple'
                       : 'bg-black border-white/20'
                   }`}>
-                    {release.highlight && <div className="w-2 h-2 rounded-full bg-white" />}
+                    {i === 0 && <div className="w-2 h-2 rounded-full bg-white" />}
                   </div>
                   <div className="flex-1 pb-4">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-mono text-sm font-bold text-white/80">
+                      <span className="font-mono text-sm font-bold text-white/80 dir-ltr" dir="ltr">
                         v{release.version}
                       </span>
                       {release.label && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          release.highlight
+                          i === 0
                             ? 'bg-accent-purple/20 text-purple-300'
                             : 'bg-white/5 text-white/30'
                         }`}>
@@ -142,8 +145,8 @@ export default function OpenSource() {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-white/30">{release.note}</div>
-                    <div className="text-xs text-white/20 mt-0.5">{release.date}</div>
+                    <div className="text-xs text-white/40">{release.note}</div>
+                    <div className="text-xs text-white/25 mt-0.5">{release.date}</div>
                   </div>
                 </div>
               ))}
@@ -159,12 +162,7 @@ export default function OpenSource() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="mt-10 flex flex-wrap justify-center gap-4"
         >
-          {[
-            { label: 'GitHub Repository', href: 'https://github.com/abdellahaarab/lenis', icon: '⭐' },
-            { label: 'Live Demo', href: 'https://pro-lenis.vercel.app', icon: '🌐' },
-            { label: 'Twitter / X', href: 'https://twitter.com/abdellahaarab', icon: '𝕏' },
-            { label: 'NPM Package', href: 'https://www.npmjs.com/package/lenis', icon: '📦' },
-          ].map(({ label, href, icon }) => (
+          {communityLinks.map(({ label, href, icon }) => (
             <a
               key={label}
               href={href}
@@ -173,7 +171,7 @@ export default function OpenSource() {
               className="btn-secondary"
             >
               <span>{icon}</span>
-              {label}
+              <span>{label}</span>
             </a>
           ))}
         </motion.div>

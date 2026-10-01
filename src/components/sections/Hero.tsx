@@ -8,6 +8,7 @@ import GradientOrb from '@/components/ui/GradientOrb'
 import GridOverlay from '@/components/ui/GridOverlay'
 import { InlineCode } from '@/components/ui/CodeBlock'
 import { scrollTo } from '@/hooks/useLenis'
+import { useLanguage } from '@/i18n'
 
 gsap.registerPlugin(SplitText)
 
@@ -15,6 +16,7 @@ const GITHUB_STARS = '14.2K'
 const NPM_WEEKLY = '620K'
 
 export default function Hero() {
+  const { t, language } = useLanguage()
   const containerRef = useRef<HTMLElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const subtitleRef = useRef<HTMLParagraphElement>(null)
@@ -31,16 +33,20 @@ export default function Hero() {
       const tl = gsap.timeline({ delay: 0.2 })
 
       if (titleRef.current) {
-        const split = new SplitText(titleRef.current, { type: 'chars,words' })
+        // Arabic cursive script preserves legibility when split by words; chars would break ligatures
+        const splitType = language === 'ar' ? 'words' : 'chars,words'
+        const split = new SplitText(titleRef.current, { type: splitType })
+        const targets = language === 'ar' ? split.words : split.chars
+
         tl.fromTo(
-          split.chars,
-          { y: 120, opacity: 0, rotateX: -90 },
+          targets,
+          { y: 60, opacity: 0, rotateX: language === 'ar' ? 0 : -90 },
           {
             y: 0,
             opacity: 1,
             rotateX: 0,
-            duration: 1,
-            stagger: 0.025,
+            duration: 0.9,
+            stagger: language === 'ar' ? 0.08 : 0.025,
             ease: 'power4.out',
           }
         )
@@ -75,7 +81,7 @@ export default function Hero() {
     }, containerRef)
 
     return () => ctx.revert()
-  }, [])
+  }, [language])
 
   useEffect(() => {
     const container = containerRef.current
@@ -110,7 +116,8 @@ export default function Hero() {
       <Particles count={100} className="z-0" />
 
       {/* Noise texture */}
-      <div className="absolute inset-0 opacity-[0.03] z-0"
+      <div
+        className="absolute inset-0 opacity-[0.03] z-0"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
         }}
@@ -129,7 +136,7 @@ export default function Hero() {
         >
           <span className="tag">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-purple animate-pulse-slow" />
-            v1.3.4 — Now with infinite scroll support
+            {t.hero.badge}
           </span>
         </motion.div>
 
@@ -137,12 +144,12 @@ export default function Hero() {
         <div className="overflow-hidden mb-8" style={{ perspective: '800px' }}>
           <h1
             ref={titleRef}
-            className="text-[clamp(56px,10vw,140px)] font-black leading-none tracking-[-0.04em] text-white"
+            className="text-[clamp(44px,8vw,120px)] font-black leading-tight tracking-tight text-white"
             style={{ transformOrigin: 'center bottom' }}
           >
-            Scroll
+            {t.hero.titleLine1}
             <br />
-            <span className="gradient-text-aurora">Perfected.</span>
+            <span className="gradient-text-aurora">{t.hero.titleLine2}</span>
           </h1>
         </div>
 
@@ -151,8 +158,7 @@ export default function Hero() {
           ref={subtitleRef}
           className="text-[clamp(16px,2vw,22px)] text-white/50 max-w-2xl leading-relaxed mb-10 text-balance"
         >
-          Lenis is an open-source library built to standardize scroll experiences and
-          bring creative smoothness to your project — with native performance and zero compromises.
+          {t.hero.subtitle}
         </p>
 
         {/* CTAs */}
@@ -163,9 +169,9 @@ export default function Hero() {
             rel="noopener noreferrer"
             className="btn-primary group"
           >
-            <Play size={14} className="fill-black" />
-            Live Demo
-            <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            <Play size={14} className="fill-black shrink-0" />
+            <span>{t.hero.liveDemo}</span>
+            <ArrowRight size={14} className="shrink-0 rtl:rotate-180 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
           </a>
 
           <a
@@ -174,21 +180,21 @@ export default function Hero() {
             rel="noopener noreferrer"
             className="btn-secondary group"
           >
-            <Github size={14} />
-            GitHub
-            <Star size={13} className="ml-0.5 text-yellow-400/70 group-hover:text-yellow-400 transition-colors" />
+            <Github size={14} className="shrink-0" />
+            <span>{t.hero.github}</span>
+            <Star size={13} className="ms-0.5 text-yellow-400/70 group-hover:text-yellow-400 transition-colors shrink-0" />
           </a>
 
           <button
             onClick={() => scrollTo('#install', { offset: -80 })}
             className="btn-secondary"
           >
-            Get Started
+            {t.hero.getStarted}
           </button>
         </div>
 
         {/* Install command */}
-        <div className="mb-16">
+        <div className="mb-16 dir-ltr" dir="ltr">
           <InlineCode>npm install lenis</InlineCode>
         </div>
 
@@ -198,28 +204,28 @@ export default function Hero() {
           className="flex flex-wrap items-center justify-center gap-8 text-sm"
         >
           <div className="flex items-center gap-2 text-white/40">
-            <Star size={14} className="text-yellow-400/70" />
-            <span className="font-semibold text-white/70">{GITHUB_STARS}</span>
-            <span>GitHub Stars</span>
+            <Star size={14} className="text-yellow-400/70 shrink-0" />
+            <span className="font-semibold text-white/70 font-mono dir-ltr" dir="ltr">{GITHUB_STARS}</span>
+            <span>{t.hero.starsLabel}</span>
           </div>
           <div className="w-px h-4 bg-white/10" />
           <div className="flex items-center gap-2 text-white/40">
-            <Download size={14} className="text-green-400/70" />
-            <span className="font-semibold text-white/70">{NPM_WEEKLY}</span>
-            <span>Weekly Downloads</span>
+            <Download size={14} className="text-green-400/70 shrink-0" />
+            <span className="font-semibold text-white/70 font-mono dir-ltr" dir="ltr">{NPM_WEEKLY}</span>
+            <span>{t.hero.downloadsLabel}</span>
           </div>
           <div className="w-px h-4 bg-white/10" />
           <div className="flex items-center gap-2 text-white/40">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="font-semibold text-white/70">MIT</span>
-            <span>Open Source</span>
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
+            <span className="font-semibold text-white/70 font-mono dir-ltr" dir="ltr">MIT</span>
+            <span>{t.hero.licenseLabel}</span>
           </div>
         </div>
       </motion.div>
 
       {/* Scroll indicator */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 opacity-40">
-        <span className="text-xs font-mono text-white/50 tracking-widest uppercase">Scroll</span>
+        <span className="text-xs font-mono text-white/50 tracking-widest uppercase">{t.hero.scrollIndicator}</span>
         <div className="w-px h-10 bg-gradient-to-b from-white/50 to-transparent relative overflow-hidden">
           <div className="absolute top-0 w-full h-4 bg-white scroll-dot" />
         </div>
