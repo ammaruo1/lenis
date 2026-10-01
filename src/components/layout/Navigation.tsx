@@ -1,180 +1,201 @@
-import { useState } from 'react'
-import { motion, useScroll, useMotionValueEvent } from 'framer-motion'
-import { Github, Menu, X, Globe } from 'lucide-react'
-import { scrollTo } from '@/hooks/useLenis'
-import { cn } from '@/lib/utils'
-import { useLanguage } from '@/i18n'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useLanguage } from '@/i18n/LanguageContext'
+import { Menu, X, Globe } from 'lucide-react'
+import { useLenis } from 'lenis/react'
+import SkipLink from './SkipLink'
 
 export default function Navigation() {
-  const { language, t, toggleLanguage } = useLanguage()
-  const [scrolled, setScrolled] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const { scrollY } = useScroll()
-
-  useMotionValueEvent(scrollY, 'change', (v) => {
-    setScrolled(v > 40)
-  })
+  const { t, language, toggleLanguage } = useLanguage()
+  const [isOpen, setIsOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [activeSection, setActiveSection] = useState('')
+  const menuRef = useRef<HTMLDivElement>(null)
+  
+  const lenis = useLenis()
 
   const navLinks = [
-    { label: t.nav.why, href: '#why' },
-    { label: t.nav.features, href: '#features' },
-    { label: t.nav.install, href: '#install' },
-    { label: t.nav.showcase, href: '#showcase' },
-    { label: t.nav.performance, href: '#performance' },
+    { id: 'setups', label: t.nav.setups },
+    { id: 'business', label: t.nav.businessSolutions },
+    { id: 'service', label: t.nav.warrantySupport },
+    { id: 'contact', label: t.nav.contactUs }
   ]
 
-  const handleNav = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault()
-    scrollTo(href, { offset: -80 })
-    setMobileOpen(false)
+  const handleScroll = useCallback(() => {
+    setIsScrolled(window.scrollY > 50)
+    
+    const sections = ['hero', 'integration', 'setups', 'categories', 'business', 'service', 'trust', 'contact']
+    let current = ''
+    for (const section of sections) {
+      const el = document.getElementById(section)
+      if (el && window.scrollY >= el.offsetTop - 100) {
+        current = section
+      }
+    }
+    setActiveSection(current)
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [handleScroll])
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false)
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
+
+  const scrollTo = (id: string, e?: React.MouseEvent) => {
+    e?.preventDefault()
+    setIsOpen(false)
+    if (lenis) {
+      lenis.scrollTo(`#${id}`, { offset: -64 })
+    } else {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+    }
   }
+
+  const Logo = () => (
+    <a 
+      href="#hero" 
+      onClick={(e) => scrollTo('hero', e)}
+      className="text-lg font-bold text-[#17131F] flex items-center gap-2"
+    >
+      <span className="text-purple-600">{language === 'ar' ? 'الجيل العربي' : 'Al-Jeel Al-Arabi'}</span>
+      <span>{language === 'ar' ? 'الرقمي' : 'Digital'}</span>
+    </a>
+  )
 
   return (
     <>
-      <motion.header
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 1.2 }}
-        className={cn(
-          'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
-          scrolled ? 'py-3' : 'py-5'
-        )}
+      <SkipLink />
+      <header 
+        className={`fixed top-0 start-0 end-0 z-50 transition-all duration-300 ${
+          isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm h-16' : 'bg-transparent h-20'
+        } flex items-center`}
       >
-        <div
-          className={cn(
-            'mx-4 md:mx-8 rounded-2xl transition-all duration-500',
-            scrolled
-              ? 'glass-strong shadow-2xl shadow-black/50'
-              : 'bg-transparent'
-          )}
-        >
-          <div className="flex items-center justify-between px-5 py-3">
-            {/* Logo */}
-            <a
-              href="/"
-              className="flex items-center gap-2.5 group"
-              onClick={(e) => { e.preventDefault(); scrollTo(0) }}
-            >
-              <div className="relative shrink-0">
-                <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-                  <path d="M6 10 Q10 6 16 10 Q22 14 26 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" className="group-hover:stroke-purple-400 transition-colors duration-300" />
-                  <path d="M6 16 Q10 12 16 16 Q22 20 26 16" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.6" className="group-hover:stroke-purple-400 transition-colors duration-300" />
-                  <path d="M6 22 Q10 18 16 22 Q22 26 26 22" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.3" className="group-hover:stroke-purple-400 transition-colors duration-300" />
-                </svg>
-              </div>
-              <span className="font-bold text-white text-lg tracking-tight group-hover:text-white/80 transition-colors">
-                {language === 'ar' ? 'الجيل العربي' : 'lenis'}
-              </span>
-              <span className="hidden sm:flex tag text-[10px] px-1.5 py-0.5 dir-ltr" dir="ltr">v1.3.4</span>
-            </a>
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="flex items-center justify-between h-full">
+            <Logo />
 
-            {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={(e) => handleNav(e, link.href)}
-                  className="px-4 py-2 text-sm text-white/60 hover:text-white rounded-xl hover:bg-white/5 transition-all duration-200"
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center gap-8" aria-label={'Main Navigation'}>
+              <ul className="flex items-center gap-6">
+                {navLinks.map((link) => (
+                  <li key={link.id}>
+                    <a
+                      href={`#${link.id}`}
+                      onClick={(e) => scrollTo(link.id, e)}
+                      className={`text-sm font-medium transition-colors hover:text-purple-600 ${
+                        activeSection === link.id ? 'text-purple-600' : 'text-[#17131F]'
+                      }`}
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={toggleLanguage}
+                  className="flex items-center gap-2 text-sm font-medium text-[#17131F] hover:text-purple-600 transition-colors"
+                  aria-label={t.nav.switchLanguage || 'Toggle language'}
                 >
-                  {link.label}
+                  <Globe className="w-4 h-4" />
+                  <span>{language === 'ar' ? 'English' : 'العربية'}</span>
+                </button>
+                
+                <a 
+                  href="#setups"
+                  onClick={(e) => scrollTo('setups', e)}
+                  className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm shadow-purple-600/20"
+                >
+                  {t.nav.findSetup}
                 </a>
-              ))}
+              </div>
             </nav>
 
-            {/* Right actions */}
-            <div className="flex items-center gap-2">
-              {/* Language Switcher */}
+            {/* Mobile Header Controls */}
+            <div className="flex items-center gap-3 md:hidden">
               <button
-                type="button"
                 onClick={toggleLanguage}
-                aria-label={t.nav.switchLanguage}
-                title={t.nav.switchLanguage}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="p-2 text-[#17131F] hover:text-purple-600"
+                aria-label={t.nav.switchLanguage || 'Toggle language'}
               >
-                <Globe size={13} className="text-accent-cyan shrink-0" />
-                <span>{t.nav.targetLanguageName}</span>
+                <Globe className="w-5 h-5" />
               </button>
-
-              <a
-                href="https://github.com/abdellahaarab/lenis"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-all duration-200"
-              >
-                <Github size={15} />
-                <span className="font-mono text-xs dir-ltr" dir="ltr">14.2K</span>
-              </a>
-
-              <a
-                href="#install"
-                onClick={(e) => handleNav(e, '#install')}
-                className="btn-primary text-xs px-4 py-2 hidden sm:flex"
-              >
-                {t.nav.getStarted}
-              </a>
-
               <button
-                onClick={() => setMobileOpen(!mobileOpen)}
-                className="md:hidden p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                aria-label={t.nav.toggleMenu}
+                onClick={() => setIsOpen(true)}
+                className="p-2 text-[#17131F]"
+                aria-expanded={isOpen}
+                aria-label={t.nav.toggleMenu || 'Open Menu'}
               >
-                {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+                <Menu className="w-6 h-6" />
               </button>
             </div>
           </div>
         </div>
-      </motion.header>
 
-      {/* Mobile menu */}
-      <motion.div
-        initial={false}
-        animate={{ opacity: mobileOpen ? 1 : 0, y: mobileOpen ? 0 : -10 }}
-        transition={{ duration: 0.2 }}
-        className={cn(
-          'fixed inset-x-4 top-24 z-40 glass-strong rounded-2xl p-6 md:hidden',
-          !mobileOpen && 'pointer-events-none'
-        )}
-      >
-        <nav className="flex flex-col gap-2">
-          {/* Mobile Language Switcher Row */}
-          <div className="flex items-center justify-between pb-3 border-b border-white/10">
-            <span className="text-xs text-white/40">{language === 'ar' ? 'اللغة' : 'Language'}</span>
-            <button
-              type="button"
-              onClick={() => {
-                toggleLanguage()
-                setMobileOpen(false)
-              }}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-white transition-all"
-            >
-              <Globe size={13} className="text-accent-cyan" />
-              <span>{t.nav.targetLanguageName}</span>
-            </button>
-          </div>
-
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={(e) => handleNav(e, link.href)}
-              className="px-4 py-3 text-white/70 hover:text-white rounded-xl hover:bg-white/5 transition-all text-start"
-            >
-              {link.label}
-            </a>
-          ))}
-          <div className="h-px bg-white/10 my-1" />
-          <a
-            href="https://github.com/abdellahaarab/lenis"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-3 text-white/70 hover:text-white rounded-xl hover:bg-white/5 transition-all text-start"
+        {/* Mobile Menu Overlay */}
+        {isOpen && (
+          <div 
+            className="fixed inset-0 bg-[#F8F7FC] z-50 flex flex-col md:hidden"
+            role="dialog"
+            aria-modal="true"
+            ref={menuRef}
           >
-            <Github size={16} />
-            GitHub
-          </a>
-        </nav>
-      </motion.div>
+            <div className="flex items-center justify-between p-4 h-16 border-b border-gray-200">
+              <Logo />
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-2 text-[#17131F]"
+                aria-label={t.nav.toggleMenu || 'Close Menu'}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto py-8 px-6 flex flex-col gap-6">
+              <nav className="flex flex-col gap-6" aria-label={'Mobile Navigation'}>
+                {navLinks.map((link) => (
+                  <a
+                    key={link.id}
+                    href={`#${link.id}`}
+                    onClick={(e) => scrollTo(link.id, e)}
+                    className={`text-2xl font-bold transition-colors ${
+                      activeSection === link.id ? 'text-purple-600' : 'text-[#17131F]'
+                    }`}
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </nav>
+              
+              <div className="mt-auto pt-8 border-t border-gray-200 flex flex-col gap-4">
+                <a 
+                  href="#setups"
+                  onClick={(e) => scrollTo('setups', e)}
+                  className="w-full py-4 text-center bg-purple-600 hover:bg-purple-700 text-white text-lg font-medium rounded-xl"
+                >
+                  {t.nav.findSetup}
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
     </>
   )
 }

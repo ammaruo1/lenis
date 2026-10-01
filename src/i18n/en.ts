@@ -1,295 +1,177 @@
-import { Translations } from './types'
+import { Translations } from './types';
 
 export const en: Translations = {
   meta: {
-    title: 'Lenis — The Smoothest Scroll Library',
-    description: 'Lenis — The smoothest scroll library. Butter-smooth scrolling for your next project. Open source, performant, framework-agnostic.',
+    title: 'Al-Jeel Al-Arabi Digital Store — Devices, Setups & Tech Solutions',
+    description: 'Devices, setups and technology solutions for people and businesses in Sana\'a. Choose the right technology and bring the pieces together.'
   },
   nav: {
-    why: 'Why Lenis',
-    features: 'Features',
-    install: 'Install',
-    showcase: 'Showcase',
-    performance: 'Performance',
-    getStarted: 'Get Started',
-    switchLanguage: 'التحويل إلى العربية',
+    setups: 'Setups',
+    businessSolutions: 'Business Solutions',
+    warrantySupport: 'Warranty & Support',
+    contactUs: 'Contact Us',
+    switchLanguage: 'العربية',
     currentLanguageName: 'English',
     targetLanguageName: 'العربية',
-    toggleMenu: 'Toggle menu',
+    toggleMenu: 'Menu',
+    findSetup: 'Find your setup'
   },
   hero: {
-    badge: 'v1.3.4 — Now with infinite scroll support',
-    titleLine1: 'Scroll',
-    titleLine2: 'Perfected.',
-    subtitle: 'Lenis is an open-source library built to standardize scroll experiences and bring creative smoothness to your project — with native performance and zero compromises.',
-    liveDemo: 'Live Demo',
-    github: 'GitHub',
-    getStarted: 'Get Started',
-    starsLabel: 'GitHub Stars',
-    downloadsLabel: 'Weekly Downloads',
-    licenseLabel: 'Open Source',
-    scrollIndicator: 'Scroll',
+    storeName: 'Al-Jeel Al-Arabi Digital Store',
+    tagline: 'Your tech. Working together.',
+    subtitle: 'Devices, setups and technology solutions for people and businesses in Sana\'a.',
+    helper: 'Choose the right technology and bring the pieces together, from your device to your workspace.',
+    ctaPrimary: 'Find your setup',
+    ctaBusiness: 'Business solutions',
+    scrollIndicator: 'Discover more'
   },
-  why: {
-    tag: 'Why Lenis',
-    titleLine1: 'The scroll experience',
-    titleLine2: 'your users deserve.',
-    subtitle: 'Native scroll is unpredictable. Lenis wraps it in a mathematical model that feels like butter — without sacrificing accessibility or performance.',
-    problems: [
-      {
-        before: 'Janky, abrupt scroll snapping',
-        after: 'Physics-based easing that feels natural',
-      },
-      {
-        before: 'Inconsistent behavior across browsers',
-        after: 'Normalized scroll events everywhere',
-      },
-      {
-        before: 'Complex setup for scroll animations',
-        after: 'GSAP ScrollTrigger integration built-in',
-      },
-      {
-        before: 'Heavy libraries with bloated APIs',
-        after: '2.6KB gzipped, tree-shakeable',
-      },
+  integration: {
+    title: 'Every part has a purpose. Together, they complete your setup.',
+    subtitle: 'We choose what works with your device and connect every detail',
+    stages: [
+      { title: 'We start with your needs.', description: 'Choices tied to your use case' },
+      { title: 'We pick what works with your device.', description: 'Compatibility and setup' },
+      { title: 'And bring the details together.', description: 'Integration across components' }
     ],
-    stats: [
-      { value: '2.6', unit: 'KB', label: 'Gzipped Size' },
-      { value: '60', unit: 'FPS', label: 'Consistent' },
-      { value: '0', unit: 'deps', label: 'Dependencies' },
-      { value: '14k', unit: '★', label: 'GitHub Stars' },
-    ],
-    quote: '"The physics are imperceptibly perfect. It\'s the kind of thing users never notice — until it\'s gone."',
-    quoteAuthor: 'abdellahaarab',
-    quoteUrl: 'github.com/abdellahaarab/lenis',
+    cta: 'Choose your use case'
   },
-  features: {
-    tag: 'Features',
-    titleLine1: 'Everything you need,',
-    titleLine2: "nothing you don't.",
-    subtitle: 'Purposefully designed. Every feature earned its place.',
-    learnMore: 'Learn more',
+  useCases: {
+    title: 'Start with what you want to do.',
+    subtitle: 'Pick your use case and see how we set things up',
+    cases: [
+      {
+        id: 'study',
+        label: 'Study & Learn',
+        title: 'A space to help you start.',
+        description: 'A suitable laptop, storage, charging and accessories. Chosen based on your field and programs.',
+        items: ['Suitable laptop', 'Carrying accessories', 'Storage & charging'],
+        cta: 'Help me choose a study setup'
+      },
+      {
+        id: 'work',
+        label: 'Work & Produce',
+        title: 'Details that serve your day.',
+        description: 'Laptop, monitor, hub and stand. Port compatibility and workspace needs.',
+        items: ['Laptop & monitor', 'Hub & stand', 'Desk organization'],
+        cta: 'Discuss my office setup'
+      },
+      {
+        id: 'content',
+        label: 'Create Content',
+        title: 'Set up your audio and visuals.',
+        description: 'Microphone, lighting, headphones and arm. Device connectivity and recording workflow.',
+        items: ['Microphone & arm', 'Professional lighting', 'Studio headphones'],
+        cta: 'Request a content creation setup'
+      },
+      {
+        id: 'gaming',
+        label: 'Play & Enjoy',
+        title: 'Set up your experience.',
+        description: 'Gaming device, monitor, headset and peripherals. Balanced components for your use and budget.',
+        items: ['Gaming device', 'Monitor & headset', 'Balanced peripherals'],
+        cta: 'Discuss a gaming setup'
+      }
+    ],
+    ctaPrefix: 'Discuss this setup'
+  },
+  categories: {
+    title: 'Explore Categories',
     items: [
-      {
-        tag: 'Core',
-        title: 'Imperceptible Performance',
-        description: 'Sub-millisecond RAF execution. Zero layout thrashing. GPU-accelerated transforms only.',
-      },
-      {
-        tag: 'Compat',
-        title: 'Framework Agnostic',
-        description: 'Works with React, Vue, Svelte, Angular, Next.js, Nuxt, and plain HTML.',
-      },
-      {
-        tag: 'Integration',
-        title: 'GSAP ScrollTrigger',
-        description: "First-class integration with the world's most powerful scroll animation engine.",
-      },
-      {
-        tag: 'Size',
-        title: '2.6KB Gzipped',
-        description: 'Tiny footprint with zero dependencies. Tree-shakeable for even smaller bundles.',
-      },
-      {
-        tag: 'DX',
-        title: 'TypeScript Native',
-        description: 'Full type definitions included. Autocomplete, type checking, and docs in your editor.',
-      },
-      {
-        tag: 'Extensible',
-        title: 'Modular Architecture',
-        description: 'Plugin system for extending behavior. Build your own scroll effects.',
-      },
-      {
-        tag: 'A11y',
-        title: 'Accessibility First',
-        description: 'Respects prefers-reduced-motion. Full keyboard navigation support.',
-      },
-      {
-        tag: 'Feature',
-        title: 'Infinite Scroll',
-        description: 'Native support for infinite looping scroll experiences and carousels.',
-      },
-      {
-        tag: 'Control',
-        title: 'Direction Control',
-        description: 'Vertical, horizontal, or bidirectional scrolling. Reverse direction support.',
-      },
+      { id: 'laptops', name: 'Laptops & Devices', description: 'Devices for every use case' },
+      { id: 'displays', name: 'Displays & Desk Setup', description: 'Clearer view and organized space' },
+      { id: 'audio', name: 'Audio & Content Creation', description: 'Recording, listening and streaming gear' },
+      { id: 'gaming', name: 'Gaming & Peripherals', description: 'Balanced performance and experience' },
+      { id: 'network', name: 'Networking & Connectivity', description: 'Connect devices and share resources' },
+      { id: 'storage', name: 'Storage', description: 'Organized file access' },
+      { id: 'power', name: 'Power & Protection', description: 'Continuous operation' }
+    ]
+  },
+  business: {
+    title: 'From your desk to your team.',
+    subtitle: 'Technology solutions for companies and organizations',
+    description: 'We organize your team\'s needs into a clear scope: devices, connectivity, storage, and power, with setup details and support based on the project.',
+    pillars: [
+      { title: 'Devices', description: 'Workstations and devices based on tasks' },
+      { title: 'Connectivity & Storage', description: 'Internal network and shared storage' },
+      { title: 'Power & Support', description: 'Operation protection and support plan' }
     ],
-  },
-  demo: {
-    tag: 'Installation',
-    titleLine1: 'Set up in',
-    titleLine2: '30 seconds.',
-    subtitle: 'Drop-in replacement for native scroll. Works with any framework.',
-    tabs: {
-      basic: 'Basic',
-      react: 'React',
-      options: 'Options',
-      gsap: 'GSAP',
-    },
-    liveConfig: 'Live Config',
-    duration: 'Duration',
-    wheelMultiplier: 'Wheel Multiplier',
-    touchMultiplier: 'Touch Multiplier',
-    easing: 'Easing',
-    metricsTitle: 'Metrics',
-    metrics: {
-      bundleSize: 'Bundle Size',
-      frameBudget: 'Frame Budget',
-      treeShakeable: 'Tree Shakeable',
-      ssrSafe: 'SSR Safe',
-      yes: 'Yes',
-    },
-    copy: 'Copy',
-    copied: 'Copied!',
-  },
-  showcase: {
-    tag: 'Showcase',
-    titleLine1: "Trusted by the world's",
-    titleLine2: 'best creative teams.',
-    subtitle: 'From agency studios to Fortune 500 companies — Lenis powers the scroll experience.',
-  },
-  performance: {
-    tag: 'Performance',
-    titleLine1: 'Zero compromise.',
-    titleLine2: '100% speed.',
-    subtitle: 'Lighthouse scores. Real benchmarks. Production data.',
-    resourceUsage: 'Resource Usage',
-    lighthouseScores: 'Lighthouse Scores',
-    fpsText: '60 FPS',
-    fpsSubtext: 'Consistent on all devices',
-    metrics: [
-      {
-        label: 'Bundle Size',
-        unit: 'KB',
-        suffix: 'gzipped',
-        description: 'vs 38KB jQuery, 11KB Scroll Smooth',
-      },
-      {
-        label: 'Frame Budget',
-        unit: 'ms',
-        suffix: 'per frame',
-        description: 'Leaves 16.2ms free per 60fps frame',
-      },
-      {
-        label: 'Memory Usage',
-        unit: 'MB',
-        suffix: 'typical',
-        description: 'No memory leaks — proper cleanup built in',
-      },
+    steps: [
+      { title: 'Define needs', description: 'We understand your work and requirements' },
+      { title: 'Propose scope', description: 'Suitable solutions with clear budget' },
+      { title: 'Setup & testing', description: 'Installation and inspection before handover' },
+      { title: 'Delivery & follow-up', description: 'Ongoing support after deployment' }
     ],
-    scores: {
-      performance: 'Performance',
-      accessibility: 'Accessibility',
-      bestPractices: 'Best Practices',
-      seo: 'SEO',
-    },
+    cta: 'Discuss your project',
+    formFields: {
+      companyName: 'Organization name',
+      teamSize: 'Approximate team size',
+      services: 'Required solutions',
+      description: 'Brief description',
+      timeline: 'Expected timeline',
+      contact: 'Contact method'
+    }
   },
-  testimonials: {
-    tag: 'Community',
-    titleLine1: 'The developers',
-    titleLine2: 'have spoken.',
-    items: [
-      {
-        quote: "Lenis is the closest thing to native scroll inertia I've ever experienced on the web. It's now a default dependency in every project.",
-        author: 'Bruno Simon',
-        role: 'Creative Developer',
-        company: 'Three.js Journey',
-        initials: 'BS',
-      },
-      {
-        quote: "Finally a scroll library that doesn't feel like you glued a physics engine to the DOM. It just works, and it's beautiful.",
-        author: 'Sarah Drasner',
-        role: 'VP of Developer Experience',
-        company: 'Netlify',
-        initials: 'SD',
-      },
-      {
-        quote: "We shipped Lenis on our agency site and clients immediately asked 'how did you do the scrolling?' That's the highest compliment.",
-        author: 'Marc-Antoine Roy',
-        role: 'Technical Director',
-        company: 'Locomotive',
-        initials: 'MR',
-      },
-      {
-        quote: "The GSAP ScrollTrigger integration is seamless. I haven't touched scroll-smooth or any other library since discovering Lenis.",
-        author: 'Cassie Evans',
-        role: 'GreenSock Team',
-        company: 'GSAP',
-        initials: 'CE',
-      },
-      {
-        quote: "2.6KB for this quality? I've seen worse code in 100KB libraries. Lenis does one thing and it does it perfectly.",
-        author: 'Tobias van Schneider',
-        role: 'Creative Director',
-        company: 'DESK Magazine',
-        initials: 'TV',
-      },
-      {
-        quote: 'We rebuilt our entire agency website scroll from scratch with Lenis. The before/after is night and day.',
-        author: 'Jack Tomaszewski',
-        role: 'Lead Developer',
-        company: 'Resn',
-        initials: 'JT',
-      },
-      {
-        quote: "Lenis handles edge cases I didn't even know existed. Touch, wheel, keyboard, programmatic — all feel identical.",
-        author: 'Adam Kuhn',
-        role: 'Frontend Engineer',
-        company: 'Codrops',
-        initials: 'AK',
-      },
-      {
-        quote: 'The reduced motion support is done right. Not just disabling things, but actually providing an equally good experience.',
-        author: 'Lindsey Kopacz',
-        role: 'Accessibility Expert',
-        company: 'a11ywithlindsey',
-        initials: 'LK',
-      },
+  service: {
+    title: 'Clear support after handover.',
+    subtitle: 'From selection to support',
+    stages: [
+      { title: 'We understand your needs', description: 'We learn about your use and priorities' },
+      { title: 'We check compatibility', description: 'We ensure parts work together' },
+      { title: 'We set up and deliver', description: 'Installation, testing and complete handover' },
+      { title: 'We clarify warranty & support', description: 'Clear terms and open channels' }
     ],
+    warrantyLink: 'View warranty & support details',
+    helpCta: 'I need help',
+    motto: 'Technology that integrates.. and warranty that continues'
   },
-  openSource: {
-    tag: 'Open Source',
-    titleLine1: 'Built in the open,',
-    titleLine2: 'by the community.',
-    subtitle: 'MIT licensed. No vendor lock-in. Forever free.',
-    stats: {
-      stars: 'Stars',
-      forks: 'Forks',
-      contributors: 'Contributors',
-      weeklyDl: 'Weekly DL',
-    },
-    contributorsTitle: 'Contributors',
-    viewAllContributors: 'View all contributors',
-    releaseTimeline: 'Release Timeline',
-    releases: [
-      { version: '1.3.4', date: 'Jun 2025', label: 'Latest', note: 'Infinite scroll support' },
-      { version: '1.2.0', date: 'Mar 2025', label: '', note: 'Touch gesture improvements' },
-      { version: '1.1.1', date: 'Jan 2025', label: '', note: 'GSAP 3.12 compat' },
-      { version: '1.0.0', date: 'Sep 2024', label: 'Stable', note: 'Initial stable release' },
-    ],
-    links: {
-      github: 'GitHub Repository',
-      liveDemo: 'Live Demo',
-      twitter: 'Twitter / X',
-      npm: 'NPM Package',
-    },
+  trust: {
+    title: 'What can we show?',
+    brandsTitle: 'Brands we carry',
+    brandsDisclaimer: 'Displayed brands represent available products and do not necessarily imply official dealership or certification.'
   },
   finalCta: {
-    tag: 'Ready to ship',
-    titleLine1: 'Start scrolling',
-    titleLine2: 'beautifully.',
-    subtitle: 'One package install. Zero configuration required. Your scroll transforms in under a minute.',
-    github: 'View on GitHub',
-    docs: 'Documentation',
-    license: 'MIT License · No attribution required · Forever free',
+    title: 'What would you like to set up?',
+    subtitle: 'Start with your needs. We\'ll work out the details together.',
+    individual: 'Find your setup',
+    business: 'Business solutions',
+    support: 'I need help'
   },
   footer: {
-    github: 'GitHub',
-    npm: 'NPM',
-    demo: 'Demo',
-    licenseText: 'MIT License · Built by',
-    builtBy: 'abdellahaarab',
+    storeName: 'Al-Jeel Al-Arabi Digital Store',
+    location: 'Sana\'a',
+    copyright: '© 2026 Al-Jeel Al-Arabi Digital Store. All rights reserved.',
+    privacyPolicy: 'Privacy Policy',
+    termsOfService: 'Terms of Service'
   },
-}
+  accessibility: {
+    skipToContent: 'Skip to content',
+    reduceMotion: 'Reduce motion'
+  },
+  contact: {
+    title: 'Contact Us',
+    subtitle: 'Tell us what you need and we will contact you',
+    useCaseLabel: 'Use Case',
+    currentDeviceLabel: 'Current Device (Optional)',
+    prioritiesLabel: 'Priorities',
+    budgetLabel: 'Approximate Budget',
+    budgetOptional: 'Optional',
+    sendMessage: 'Send via WhatsApp',
+    sending: 'Sending...',
+    sent: 'Chat Opened',
+    sentDescription: 'WhatsApp will open to send your message. Nothing was sent automatically.',
+    failed: 'Error occurred',
+    retry: 'Retry',
+    whatsappDisclaimer: 'A WhatsApp chat will open with a summary of your request',
+    nameLabel: 'Name',
+    companyLabel: 'Organization Name',
+    teamSizeLabel: 'Number of Users',
+    servicesLabel: 'Required Services',
+    descriptionLabel: 'Brief Description',
+    timelineLabel: 'Expected Timeline',
+    timelineOptional: 'Optional',
+    supportType: 'Issue Type',
+    supportDescription: 'Issue Description',
+    invoiceLabel: 'Invoice Number (Optional)',
+    modelLabel: 'Device Model (Optional)'
+  }
+};

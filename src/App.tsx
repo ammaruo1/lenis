@@ -5,13 +5,12 @@ import ProgressBar from '@/components/layout/ProgressBar'
 import Footer from '@/components/layout/Footer'
 import CursorFollower from '@/components/ui/CursorFollower'
 import Hero from '@/components/sections/Hero'
-import WhyLenis from '@/components/sections/WhyLenis'
-import InteractiveDemo from '@/components/sections/InteractiveDemo'
-import Features from '@/components/sections/Features'
-import Showcase from '@/components/sections/Showcase'
-import Performance from '@/components/sections/Performance'
-import Testimonials from '@/components/sections/Testimonials'
-import OpenSource from '@/components/sections/OpenSource'
+import Integration from '@/components/sections/Integration'
+import UseCases from '@/components/sections/UseCases'
+import Categories from '@/components/sections/Categories'
+import Business from '@/components/sections/Business'
+import Service from '@/components/sections/Service'
+import Trust from '@/components/sections/Trust'
 import FinalCTA from '@/components/sections/FinalCTA'
 
 export default function App() {
@@ -31,22 +30,36 @@ export default function App() {
   }, [])
 
   return (
-    <div className="relative bg-black min-h-screen">
+    <div className="relative min-h-screen">
       {/* Global overlays */}
       <CursorFollower />
       <ProgressBar />
       <Navigation />
 
-      {/* Page sections */}
-      <main>
+      {/* Page sections — ordered as the visitor journey */}
+      <main id="main-content">
+        {/* Scene 01: Who are you, what can you offer me? */}
         <Hero />
-        <WhyLenis />
-        <Features />
-        <InteractiveDemo />
-        <Showcase />
-        <Performance />
-        <Testimonials />
-        <OpenSource />
+
+        {/* Scene 02: Why combine needs at this store? */}
+        <Integration />
+
+        {/* Scene 03: What fits ME? (Study / Work / Content / Gaming) */}
+        <UseCases />
+
+        {/* Scene 04: I know what I need — where do I find it? */}
+        <Categories />
+
+        {/* Scene 05: Can you handle a company / project? */}
+        <Business />
+
+        {/* Scene 06: What happens before and after delivery? */}
+        <Service />
+
+        {/* Scene 07: What proof can you show? */}
+        <Trust />
+
+        {/* Scene 08: The decision — what do you want to set up? */}
         <FinalCTA />
       </main>
 

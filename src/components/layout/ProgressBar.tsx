@@ -1,27 +1,22 @@
-import { useScroll, useSpring, motion } from 'framer-motion'
-import { useLanguage } from '@/i18n'
-import { cn } from '@/lib/utils'
+import { motion, useScroll, useSpring } from 'framer-motion'
+import { useLanguage } from '@/i18n/LanguageContext'
 
 export default function ProgressBar() {
-  const { dir } = useLanguage()
   const { scrollYProgress } = useScroll()
+  const { dir } = useLanguage()
+  
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
-    restDelta: 0.001,
+    restDelta: 0.001
   })
 
   return (
     <motion.div
-      className={cn(
-        'fixed top-0 left-0 right-0 h-[2px] z-[100] pointer-events-none',
-        dir === 'rtl' ? 'origin-right' : 'origin-left'
-      )}
-      style={{
-        scaleX,
-        background: dir === 'rtl'
-          ? 'linear-gradient(270deg, #8b5cf6, #6366f1, #06b6d4)'
-          : 'linear-gradient(90deg, #8b5cf6, #6366f1, #06b6d4)',
+      className="fixed top-0 start-0 end-0 h-[3px] bg-gradient-to-r from-purple-600 to-purple-500 z-[60]"
+      style={{ 
+        scaleX, 
+        transformOrigin: dir === 'rtl' ? 'right' : 'left' 
       }}
     />
   )

@@ -1,137 +1,43 @@
-import { useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
-import gsap from 'gsap'
-import { SplitText } from 'gsap/SplitText'
-import { Github, ArrowRight, BookOpen } from 'lucide-react'
-import { InlineCode } from '@/components/ui/CodeBlock'
-import GradientOrb from '@/components/ui/GradientOrb'
-import Particles from '@/components/ui/Particles'
-import { useLanguage } from '@/i18n'
-
-gsap.registerPlugin(SplitText)
+import React from 'react';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export default function FinalCTA() {
-  const { t, language } = useLanguage()
-  const headingRef = useRef<HTMLHeadingElement>(null)
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      if (!headingRef.current) return
-      const splitType = language === 'ar' ? 'words' : 'chars'
-      const split = new SplitText(headingRef.current, { type: splitType })
-      const targets = language === 'ar' ? split.words : split.chars
-
-      gsap.fromTo(
-        targets,
-        { y: 50, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          stagger: language === 'ar' ? 0.08 : 0.02,
-          duration: 0.8,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: headingRef.current,
-            start: 'top 80%',
-            once: true,
-          },
-        }
-      )
-    })
-    return () => ctx.revert()
-  }, [language])
+  const { t } = useLanguage();
 
   return (
-    <section className="relative py-40 overflow-hidden text-center">
-      <GradientOrb color="purple" size="xl" className="left-1/2 -translate-x-1/2 -bottom-40 opacity-20" />
-      <GradientOrb color="blue" size="md" className="-start-20 top-0 opacity-10" />
-      <GradientOrb color="cyan" size="md" className="-end-20 top-0 opacity-10" />
-      <Particles count={60} />
-
-      {/* Grid */}
-      <div
-        className="absolute inset-0 grid-overlay pointer-events-none"
-        style={{ WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)' }}
-      />
-
-      <div className="section-padding container-custom relative z-10 max-w-4xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mb-8"
-        >
-          <span className="tag">{t.finalCta.tag}</span>
-        </motion.div>
-
-        <div className="overflow-hidden mb-8">
-          <h2
-            ref={headingRef}
-            className="text-[clamp(44px,7vw,96px)] font-black leading-tight tracking-tight"
-          >
-            {t.finalCta.titleLine1}
-            <br />
-            <span className="gradient-text-aurora">{t.finalCta.titleLine2}</span>
-          </h2>
-        </div>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.3 }}
-          className="text-white/50 text-xl mb-12 max-w-2xl mx-auto leading-relaxed"
-        >
+    <section id="contact" className="relative py-32 bg-gradient-to-b from-[#0B0B0F] to-[#1a0b2e] text-white overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+      
+      <div className="container mx-auto px-4 md:px-8 max-w-5xl relative z-10 text-center">
+        <h2 className="text-4xl md:text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white to-purple-200">
+          {t.finalCta.title}
+        </h2>
+        <p className="text-xl md:text-2xl text-purple-200/70 mb-12 max-w-2xl mx-auto">
           {t.finalCta.subtitle}
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.4 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10"
-        >
-          <div className="dir-ltr" dir="ltr">
-            <InlineCode>npm install lenis</InlineCode>
-          </div>
-
-          <a
-            href="https://github.com/abdellahaarab/lenis"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary"
+        </p>
+        
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+          <a 
+            href="#contact" 
+            className="w-full sm:w-auto px-8 py-4 rounded-full bg-purple-600 text-white font-bold text-lg hover:bg-purple-500 transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] transform hover:-translate-y-1"
           >
-            <Github size={16} />
-            <span>{t.finalCta.github}</span>
+            {t.finalCta.individual}
           </a>
-
-          <a
-            href="https://pro-lenis.vercel.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary group"
+          <a 
+            href="#business" 
+            className="w-full sm:w-auto px-8 py-4 rounded-full border border-purple-500/50 bg-purple-900/20 text-white font-bold text-lg hover:bg-purple-800/40 transition-colors backdrop-blur-sm"
           >
-            <BookOpen size={16} />
-            <span>{t.finalCta.docs}</span>
-            <ArrowRight size={14} className="rtl:rotate-180 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
+            {t.finalCta.business}
           </a>
-        </motion.div>
-
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="text-xs text-white/30"
-        >
-          {t.finalCta.license}
-        </motion.p>
+          <a 
+            href="#contact" 
+            className="w-full sm:w-auto px-8 py-4 rounded-full bg-white/5 text-gray-300 font-bold text-lg hover:bg-white/10 hover:text-white transition-colors"
+          >
+            {t.finalCta.support}
+          </a>
+        </div>
       </div>
-
-      {/* Bottom border glow */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
     </section>
-  )
-}
+  );
+};

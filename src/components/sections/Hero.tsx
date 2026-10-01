@@ -1,238 +1,182 @@
-import { useEffect, useRef } from 'react'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { useRef, useEffect } from 'react'
+import { useLanguage } from '@/i18n/LanguageContext'
 import gsap from 'gsap'
-import { SplitText } from 'gsap/SplitText'
-import { ArrowRight, Github, Star, Download, Play } from 'lucide-react'
-import Particles from '@/components/ui/Particles'
-import GradientOrb from '@/components/ui/GradientOrb'
-import GridOverlay from '@/components/ui/GridOverlay'
-import { InlineCode } from '@/components/ui/CodeBlock'
-import { scrollTo } from '@/hooks/useLenis'
-import { useLanguage } from '@/i18n'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { ArrowDown, Briefcase, Zap } from 'lucide-react'
 
-gsap.registerPlugin(SplitText)
-
-const GITHUB_STARS = '14.2K'
-const NPM_WEEKLY = '620K'
+gsap.registerPlugin(ScrollTrigger)
 
 export default function Hero() {
-  const { t, language } = useLanguage()
+  const { dir, t } = useLanguage()
   const containerRef = useRef<HTMLElement>(null)
-  const titleRef = useRef<HTMLHeadingElement>(null)
-  const subtitleRef = useRef<HTMLParagraphElement>(null)
-  const ctaRef = useRef<HTMLDivElement>(null)
-  const statsRef = useRef<HTMLDivElement>(null)
-  const mouseRef = useRef<HTMLDivElement>(null)
-
-  const { scrollYProgress } = useScroll({ target: containerRef })
-  const y = useTransform(scrollYProgress, [0, 1], ['0%', '30%'])
-  const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
-
+  const textRef = useRef<HTMLDivElement>(null)
+  const visualRef = useRef<HTMLDivElement>(null)
+  
   useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ delay: 0.2 })
+      if (prefersReducedMotion) return
 
-      if (titleRef.current) {
-        // Arabic cursive script preserves legibility when split by words; chars would break ligatures
-        const splitType = language === 'ar' ? 'words' : 'chars,words'
-        const split = new SplitText(titleRef.current, { type: splitType })
-        const targets = language === 'ar' ? split.words : split.chars
+      // Entrance animation for text
+      const texts = gsap.utils.toArray('.hero-text-anim')
+      gsap.from(texts, {
+        y: 30,
+        opacity: 0,
+        duration: 1,
+        stagger: 0.15,
+        ease: 'power3.out',
+        delay: 0.2
+      })
 
-        tl.fromTo(
-          targets,
-          { y: 60, opacity: 0, rotateX: language === 'ar' ? 0 : -90 },
-          {
-            y: 0,
-            opacity: 1,
-            rotateX: 0,
-            duration: 0.9,
-            stagger: language === 'ar' ? 0.08 : 0.025,
-            ease: 'power4.out',
-          }
-        )
-      }
+      // Parallax for visual elements
+      gsap.to('.hero-visual-layer-1', {
+        y: -50,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: true
+        }
+      })
+      
+      gsap.to('.hero-visual-layer-2', {
+        y: -25,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: true
+        }
+      })
+      
+      // Floating animation for devices
+      gsap.to('.floating-element', {
+        y: '-=15',
+        duration: 2.5,
+        yoyo: true,
+        repeat: -1,
+        ease: 'sine.inOut',
+        stagger: {
+          each: 0.5,
+          from: 'random'
+        }
+      })
 
-      if (subtitleRef.current) {
-        tl.fromTo(
-          subtitleRef.current,
-          { y: 30, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' },
-          '-=0.4'
-        )
-      }
-
-      if (ctaRef.current) {
-        tl.fromTo(
-          ctaRef.current.children,
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, stagger: 0.1, duration: 0.6, ease: 'power3.out' },
-          '-=0.3'
-        )
-      }
-
-      if (statsRef.current) {
-        tl.fromTo(
-          statsRef.current,
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' },
-          '-=0.2'
-        )
-      }
     }, containerRef)
 
     return () => ctx.revert()
-  }, [language])
-
-  useEffect(() => {
-    const container = containerRef.current
-    const mouse = mouseRef.current
-    if (!container || !mouse) return
-
-    const onMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect()
-      const x = ((e.clientX - rect.left) / rect.width) * 100
-      const y = ((e.clientY - rect.top) / rect.height) * 100
-      mouse.style.background = `radial-gradient(600px circle at ${x}% ${y}%, rgba(99,102,241,0.12) 0%, transparent 60%)`
-    }
-
-    container.addEventListener('mousemove', onMove, { passive: true })
-    return () => container.removeEventListener('mousemove', onMove)
   }, [])
 
   return (
-    <section
+    <section 
+      id="hero" 
       ref={containerRef}
-      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
-      style={{ perspective: '1000px' }}
+      className="relative min-h-screen flex items-center bg-[#0B0B0F] overflow-hidden pt-24 pb-16"
+      dir={dir}
     >
-      {/* Animated spotlight */}
-      <div ref={mouseRef} className="absolute inset-0 pointer-events-none z-10 transition-all duration-300" />
+       <div className="container mx-auto px-4 lg:px-8 max-w-7xl relative z-10">
+         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
+           {/* Text Content */}
+           <div ref={textRef} className="w-full lg:w-1/2 flex flex-col items-start text-start">
+             <span className="hero-text-anim inline-block py-1.5 px-4 rounded-full bg-purple-900/30 text-purple-300 text-sm font-medium mb-6 border border-purple-800/50">
+               {t.hero.storeName}
+             </span>
+             
+             <h1 className="hero-text-anim text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-[1.15] tracking-tight">
+               {t.hero.tagline}
+             </h1>
+             
+             <p className="hero-text-anim text-xl md:text-2xl text-gray-300 mb-4 max-w-xl">
+               {t.hero.subtitle}
+             </p>
+             
+             <p className="hero-text-anim text-sm text-gray-400 mb-10 max-w-xl leading-relaxed">
+               {t.hero.helper}
+             </p>
+             
+             <div className="hero-text-anim flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+               <a 
+                 href="#contact" 
+                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-[#0B0B0F]"
+               >
+                 <Zap className="w-5 h-5" />
+                 <span>{t.hero.ctaPrimary}</span>
+               </a>
+               
+               <a 
+                 href="#business" 
+                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent border border-gray-700 hover:border-gray-500 hover:bg-gray-800/50 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-[#0B0B0F]"
+               >
+                 <Briefcase className="w-5 h-5" />
+                 <span>{t.hero.ctaBusiness}</span>
+               </a>
+             </div>
+           </div>
 
-      {/* Background layers */}
-      <GridOverlay fade="bottom" className="opacity-60 z-0" />
-      <GradientOrb color="purple" size="xl" className="-top-40 -left-40 opacity-15" />
-      <GradientOrb color="blue" size="lg" className="-top-20 -right-40 opacity-10" />
-      <GradientOrb color="cyan" size="md" className="top-1/2 right-0 opacity-8" />
-      <Particles count={100} className="z-0" />
+           {/* Visual Area Placeholder */}
+           <div ref={visualRef} className="w-full lg:w-1/2 relative h-[50vh] lg:h-[70vh] flex items-center justify-center mt-8 lg:mt-0">
+             {/* Glows */}
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[400px] h-[300px] md:h-[400px] bg-purple-600/20 blur-[100px] rounded-full pointer-events-none" />
+             <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] bg-indigo-600/20 blur-[80px] rounded-full pointer-events-none" />
+             
+             {/* Composition */}
+             <div className="relative w-full max-w-md aspect-square hero-visual-layer-1">
+               {/* Background Monitor (Layer 2) */}
+               <div className="absolute top-[10%] right-[5%] w-[70%] h-[55%] bg-gray-900/80 border border-gray-700 rounded-lg shadow-xl backdrop-blur-sm -z-10 hero-visual-layer-2 floating-element">
+                 <div className="w-full h-full border border-purple-900/30 rounded-lg flex items-center justify-center">
+                    <div className="w-1/2 h-1/2 rounded-full bg-purple-500/5 blur-2xl" />
+                 </div>
+               </div>
 
-      {/* Noise texture */}
-      <div
-        className="absolute inset-0 opacity-[0.03] z-0"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
-        }}
-      />
+               {/* Main Laptop */}
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[60%] bg-[#111116] border border-gray-700 rounded-lg shadow-2xl flex flex-col overflow-hidden z-20">
+                 <div className="flex-1 bg-gradient-to-br from-gray-800/50 to-gray-900/80 border-b border-gray-700 p-2 flex items-center justify-center relative overflow-hidden">
+                   <div className="absolute inset-0 bg-purple-500/5" />
+                   
+                   {/* Abstract screen content */}
+                   <div className="absolute top-4 left-4 right-4 h-3 bg-gray-700/50 rounded-full w-1/3" />
+                   <div className="absolute top-10 left-4 right-4 h-24 bg-purple-500/10 rounded-lg border border-purple-500/20" />
+                   <div className="absolute top-36 left-4 right-4 h-3 bg-gray-700/50 rounded-full w-2/3" />
+                   <div className="absolute top-42 left-4 right-4 h-3 bg-gray-700/50 rounded-full w-1/2" />
+                 </div>
+                 {/* Keyboard Base */}
+                 <div className="h-5 bg-gray-800 flex justify-center items-start pt-1">
+                   <div className="w-[30%] h-1.5 bg-gray-600 rounded-full" />
+                 </div>
+               </div>
 
-      <motion.div
-        style={{ y, opacity }}
-        className="relative z-20 flex flex-col items-center text-center px-6 max-w-6xl mx-auto pt-32"
-      >
-        {/* Version badge */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-8"
-        >
-          <span className="tag">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-purple animate-pulse-slow" />
-            {t.hero.badge}
-          </span>
-        </motion.div>
+               {/* Foreground Mobile (Layer 1) */}
+               <div className="absolute bottom-[15%] left-[10%] w-[22%] h-[40%] bg-gray-900 border border-gray-600 rounded-2xl shadow-2xl z-30 floating-element flex flex-col p-1" style={{ animationDelay: '1s' }}>
+                 <div className="flex-1 border border-gray-700 rounded-xl bg-gradient-to-b from-gray-800 to-gray-900 flex flex-col">
+                    {/* Notch */}
+                    <div className="w-1/3 h-2 bg-gray-950 mx-auto rounded-b-md mb-2" />
+                    {/* Content */}
+                    <div className="flex-1 px-2 flex flex-col gap-2">
+                        <div className="w-full h-8 bg-purple-500/20 rounded-md" />
+                        <div className="w-2/3 h-2 bg-gray-700 rounded-full" />
+                        <div className="w-4/5 h-2 bg-gray-700 rounded-full" />
+                    </div>
+                 </div>
+               </div>
+               
+               {/* Decorative elements */}
+               <div className="absolute top-[25%] left-[20%] w-3 h-3 bg-purple-400 rounded-full shadow-[0_0_12px_rgba(168,85,247,0.9)] z-30 floating-element" style={{ animationDelay: '0.5s' }} />
+               <div className="absolute bottom-[35%] right-[20%] w-2 h-2 bg-indigo-400 rounded-full shadow-[0_0_8px_rgba(129,140,248,0.9)] z-30 floating-element" style={{ animationDelay: '1.5s' }} />
+             </div>
+           </div>
+         </div>
+       </div>
 
-        {/* Main title */}
-        <div className="overflow-hidden mb-8" style={{ perspective: '800px' }}>
-          <h1
-            ref={titleRef}
-            className="text-[clamp(44px,8vw,120px)] font-black leading-tight tracking-tight text-white"
-            style={{ transformOrigin: 'center bottom' }}
-          >
-            {t.hero.titleLine1}
-            <br />
-            <span className="gradient-text-aurora">{t.hero.titleLine2}</span>
-          </h1>
-        </div>
-
-        {/* Subtitle */}
-        <p
-          ref={subtitleRef}
-          className="text-[clamp(16px,2vw,22px)] text-white/50 max-w-2xl leading-relaxed mb-10 text-balance"
-        >
-          {t.hero.subtitle}
-        </p>
-
-        {/* CTAs */}
-        <div ref={ctaRef} className="flex flex-wrap items-center justify-center gap-3 mb-16">
-          <a
-            href="https://pro-lenis.vercel.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary group"
-          >
-            <Play size={14} className="fill-black shrink-0" />
-            <span>{t.hero.liveDemo}</span>
-            <ArrowRight size={14} className="shrink-0 rtl:rotate-180 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
-          </a>
-
-          <a
-            href="https://github.com/abdellahaarab/lenis"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary group"
-          >
-            <Github size={14} className="shrink-0" />
-            <span>{t.hero.github}</span>
-            <Star size={13} className="ms-0.5 text-yellow-400/70 group-hover:text-yellow-400 transition-colors shrink-0" />
-          </a>
-
-          <button
-            onClick={() => scrollTo('#install', { offset: -80 })}
-            className="btn-secondary"
-          >
-            {t.hero.getStarted}
-          </button>
-        </div>
-
-        {/* Install command */}
-        <div className="mb-16 dir-ltr" dir="ltr">
-          <InlineCode>npm install lenis</InlineCode>
-        </div>
-
-        {/* Stats */}
-        <div
-          ref={statsRef}
-          className="flex flex-wrap items-center justify-center gap-8 text-sm"
-        >
-          <div className="flex items-center gap-2 text-white/40">
-            <Star size={14} className="text-yellow-400/70 shrink-0" />
-            <span className="font-semibold text-white/70 font-mono dir-ltr" dir="ltr">{GITHUB_STARS}</span>
-            <span>{t.hero.starsLabel}</span>
-          </div>
-          <div className="w-px h-4 bg-white/10" />
-          <div className="flex items-center gap-2 text-white/40">
-            <Download size={14} className="text-green-400/70 shrink-0" />
-            <span className="font-semibold text-white/70 font-mono dir-ltr" dir="ltr">{NPM_WEEKLY}</span>
-            <span>{t.hero.downloadsLabel}</span>
-          </div>
-          <div className="w-px h-4 bg-white/10" />
-          <div className="flex items-center gap-2 text-white/40">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
-            <span className="font-semibold text-white/70 font-mono dir-ltr" dir="ltr">MIT</span>
-            <span>{t.hero.licenseLabel}</span>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Scroll indicator */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 opacity-40">
-        <span className="text-xs font-mono text-white/50 tracking-widest uppercase">{t.hero.scrollIndicator}</span>
-        <div className="w-px h-10 bg-gradient-to-b from-white/50 to-transparent relative overflow-hidden">
-          <div className="absolute top-0 w-full h-4 bg-white scroll-dot" />
-        </div>
-      </div>
-
-      {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black to-transparent z-10 pointer-events-none" />
+       {/* Scroll Indicator */}
+       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-gray-500 z-20">
+         <span className="text-xs font-medium tracking-widest uppercase opacity-70">
+           {t.hero.scrollIndicator}
+         </span>
+         <ArrowDown className="w-5 h-5 animate-bounce text-purple-500/70" />
+       </div>
     </section>
   )
 }

@@ -1,50 +1,63 @@
-import { useLanguage } from '@/i18n'
+import { useLanguage } from '@/i18n/LanguageContext'
+import { Globe } from 'lucide-react'
 
 export default function Footer() {
-  const { t, language } = useLanguage()
+  const { t, language, toggleLanguage } = useLanguage()
+
+  const navLinks = [
+    { id: 'setups', label: t.nav.setups },
+    { id: 'business', label: t.nav.businessSolutions },
+    { id: 'service', label: t.nav.warrantySupport },
+    { id: 'contact', label: t.nav.contactUs }
+  ]
 
   return (
-    <footer className="relative border-t border-white/[0.06] py-12">
-      <div className="section-padding container-custom">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <svg width="20" height="20" viewBox="0 0 32 32" fill="none" className="shrink-0">
-              <path d="M6 10 Q10 6 16 10 Q22 14 26 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.7" />
-              <path d="M6 16 Q10 12 16 16 Q22 20 26 16" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.4" />
-              <path d="M6 22 Q10 18 16 22 Q22 26 26 22" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.2" />
-            </svg>
-            <span className="text-white/50 text-sm font-medium">
-              {language === 'ar' ? 'الجيل العربي' : 'lenis'}
-            </span>
+    <footer className="bg-[#0B0B0F] text-[#F8F7FC] pt-16 pb-8">
+      <div className="container mx-auto px-4 md:px-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
+          <div className="md:col-span-5 flex flex-col gap-4">
+            <h2 className="text-2xl font-bold text-white">
+              {language === 'ar' ? 'الجيل العربي الرقمي' : 'Al-Jeel Al-Arabi'}
+            </h2>
+            <p className="text-purple-300 text-sm max-w-sm">
+              {t.service?.motto || 'تقنية تتكامل.. وضمان يستمر'}
+            </p>
+            <p className="text-gray-400 text-sm">
+              {t.footer?.location || 'صنعاء'}
+            </p>
           </div>
-
-          {/* Links */}
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/40">
-            <a href="https://github.com/abdellahaarab/lenis" target="_blank" rel="noopener noreferrer" className="hover:text-white/80 transition-colors">
-              {t.footer.github}
-            </a>
-            <a href="https://www.npmjs.com/package/lenis" target="_blank" rel="noopener noreferrer" className="hover:text-white/80 transition-colors">
-              {t.footer.npm}
-            </a>
-            <a href="https://pro-lenis.vercel.app" target="_blank" rel="noopener noreferrer" className="hover:text-white/80 transition-colors">
-              {t.footer.demo}
-            </a>
+          
+          <nav className="md:col-span-7 flex flex-col sm:flex-row gap-8 sm:gap-16" aria-label="Footer Navigation">
+            <div className="flex flex-col gap-4">
+              <h3 className="text-lg font-semibold text-white">{language === 'ar' ? 'روابط سريعة' : 'Quick Links'}</h3>
+              <ul className="flex flex-col gap-3">
+                {navLinks.map(link => (
+                  <li key={link.id}>
+                    <a href={`#${link.id}`} className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </nav>
+        </div>
+        
+        <div className="pt-8 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-gray-500 text-sm flex items-center gap-4">
+            <span>© {new Date().getFullYear()} {language === 'ar' ? 'الجيل العربي الرقمي' : 'Al-Jeel Al-Arabi'}.</span>
+            <a href="#" className="hover:text-purple-400 transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-purple-400 transition-colors">Terms of Service</a>
           </div>
-
-          {/* Credit */}
-          <p className="text-white/30 text-xs text-center md:text-end">
-            <span>{t.footer.licenseText} </span>
-            <a
-              href="https://github.com/abdellahaarab"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/50 hover:text-white/80 transition-colors font-mono dir-ltr inline-block"
-              dir="ltr"
-            >
-              abdellahaarab
-            </a>
-          </p>
+          
+          <button
+            onClick={toggleLanguage}
+            className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-purple-400 transition-colors"
+            aria-label={t.nav.switchLanguage || 'Toggle language'}
+          >
+            <Globe className="w-4 h-4" />
+            <span>{language === 'ar' ? 'English' : 'العربية'}</span>
+          </button>
         </div>
       </div>
     </footer>
