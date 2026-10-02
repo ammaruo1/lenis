@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "workspaces": ["packages/shared", "server", "admin"],
-  "engines": { "node": ">=22.12" },
+  "engines": { "node": ">=22.13" },
   "scripts": {
     "validate-data": "tsx scripts/validate-data.ts",
     "build": "tsx scripts/validate-data.ts && tsc && vite build",

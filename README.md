@@ -164,3 +164,27 @@ new Lenis({
 ## License
 
 MIT © [abdellahaarab](https://github.com/abdellahaarab)
+
+## نظام الإدارة — المرحلة A
+
+مساحات العمل `server/` و`admin/` و`packages/shared/` داخل هذا المستودع. المتجر في `src/`، وواجهة الإدارة منفصلة تحت `/admin/`. لم يُعدّل تصميم المتجر أو الحركات لهذه المرحلة.
+
+```sh
+npm install
+npm run env:init
+npm run db:generate
+docker compose -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.dev.yml exec -it api npm run seed:owner
+```
+
+افتح `http://localhost:5174/admin/`. أمر إنشاء المالك تفاعلي دون حساب أو كلمة مرور افتراضية، ويلزم تغيير كلمة المرور عند أول دخول. تفعيل التحقق بخطوتين اختياري في المرحلة A. البيانات التجارية لا تُعبّأ تلقائيًا.
+
+للتطوير المحلي واختبارات قاعدة البيانات وخيارات الأمان راجع [دليل الأساس](docs/admin-foundation.md)، [خطة A](docs/ADMIN-PLAN-A.md)، [تقرير A](docs/ADMIN-REPORT-A.md) و[سجل التغييرات](docs/ADMIN-CHANGELOG.md).
+
+```sh
+npm run build:all
+npm run typecheck
+npm run lint
+npm test
+npm run test:ui
+```
