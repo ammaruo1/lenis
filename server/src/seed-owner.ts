@@ -34,16 +34,35 @@ try {
   const name = (await reader.question('Owner name: ')).trim();
   reader.close();
   if (!name || name.length > 100) throw new Error('Name must have 1–100 characters');
-  const entered = await hiddenPassword('Password (minimum 12 characters; Enter generates one): ');
-  const password = PasswordSchema.parse(entered || randomToken());
-  if (entered && await hiddenPassword('Confirm password: ') !== entered) throw new Error('Passwords do not match');
+  let password: string;
+  let generated: boolean;
+  while (true) {
+    const entered = await hiddenPassword('Password (12–128 characters; Enter generates one): ');
+    const parsed = PasswordSchema.safeParse(entered || randomToken());
+    if (!parsed.success) {
+      const messages: Record<string, string> = {
+        password_short: 'Use at least 12 characters.',
+        password_long: 'Use no more than 128 characters.',
+        password_common: 'Avoid common passwords and repeated characters.',
+      };
+      stdout.write([...new Set(parsed.error.issues.map(issue => messages[issue.message] ?? 'Choose a stronger password.'))].join(' ') + ' Try again, or press Enter to generate a random password.\n');
+      continue;
+    }
+    if (entered && await hiddenPassword('Confirm password: ') !== entered) {
+      stdout.write('Passwords do not match. Try again.\n');
+      continue;
+    }
+    password = parsed.data;
+    generated = !entered;
+    break;
+  }
   const passwordHash = await hashPassword(password);
   await transaction(db, async tx => {
     if (await tx.user.count({ where: { role: 'owner' } }) > 0) throw new Error('An owner already exists');
     const user = await tx.user.create({ data: { email, name, nameSearch: normalizeSearch(name), passwordHash, role: 'owner', mustChangePassword: true } });
     await audit(tx, config, null, { userId: user.id, action: 'staff.owner_seeded', entity: 'User', entityId: user.id, after: { role: 'owner', mustChangePassword: true } });
   });
-  if (!entered) stdout.write(`Generated password (shown once): ${password}\n`);
+  if (generated) stdout.write(`Generated password (shown once): ${password}\n`);
   stdout.write('Owner created. Password change is required on first login.\n');
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Owner setup failed');
