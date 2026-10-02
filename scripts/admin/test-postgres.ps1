@@ -35,6 +35,12 @@ try {
   $resolvedTestRoot = [System.IO.Path]::GetFullPath($testRoot)
   $allowedRoot = [System.IO.Path]::GetFullPath((Join-Path $workspaceRoot '.temp')) + [System.IO.Path]::DirectorySeparatorChar
   if (-not $resolvedTestRoot.StartsWith($allowedRoot, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe test cleanup path' }
-  Remove-Item -LiteralPath $resolvedTestRoot -Recurse -Force
+  for ($cleanupAttempt = 0; $cleanupAttempt -lt 5; $cleanupAttempt++) {
+    try { Remove-Item -LiteralPath $resolvedTestRoot -Recurse -Force; break }
+    catch {
+      if ($cleanupAttempt -eq 4) { throw }
+      Start-Sleep -Milliseconds (250 * [math]::Pow(2, $cleanupAttempt))
+    }
+  }
 }
 exit $exitStatus
