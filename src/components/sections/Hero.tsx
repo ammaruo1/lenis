@@ -1,182 +1,159 @@
-import { useRef, useEffect } from 'react'
-import { useLanguage } from '@/i18n/LanguageContext'
+import { useRef } from 'react'
+import { Link } from 'react-router-dom'
+import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { ArrowDown, Briefcase, Zap } from 'lucide-react'
+import { ArrowDown, ArrowUpLeft, ArrowUpRight, ShieldCheck, Sparkles, CheckCircle, Package } from 'lucide-react'
+import { useLanguage } from '@/i18n/LanguageContext'
+import productsData from '@/data/products.json'
 
-gsap.registerPlugin(ScrollTrigger)
+gsap.registerPlugin(useGSAP)
 
 export default function Hero() {
-  const { dir, t } = useLanguage()
-  const containerRef = useRef<HTMLElement>(null)
-  const textRef = useRef<HTMLDivElement>(null)
-  const visualRef = useRef<HTMLDivElement>(null)
-  
-  useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    
-    const ctx = gsap.context(() => {
-      if (prefersReducedMotion) return
+  const { t, language, dir } = useLanguage()
+  const ref = useRef<HTMLElement>(null)
+  const ar = language === 'ar'
+  const Arrow = ar ? ArrowUpLeft : ArrowUpRight
 
-      // Entrance animation for text
-      const texts = gsap.utils.toArray('.hero-text-anim')
-      gsap.from(texts, {
-        y: 30,
-        opacity: 0,
-        duration: 1,
+  // Dynamic calculations from data
+  const inStockCount = productsData.filter((p) => p.stock === 'in_stock').length
+  const totalCategories = 7
+
+  useGSAP(() => {
+    const mm = gsap.matchMedia()
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // Phase 1 Motion: simple transform (y) and opacity entry only. No Pin, no Scrub.
+      gsap.from('.hero-copy > *', {
+        y: 28,
+        autoAlpha: 0,
+        duration: 0.8,
+        stagger: 0.1,
+        ease: 'power2.out',
+      })
+      gsap.from('.hero-product img', {
+        y: 40,
+        autoAlpha: 0,
+        duration: 1.1,
+        ease: 'power2.out',
+      })
+      gsap.from('.hero-detail', {
+        autoAlpha: 0,
+        y: 15,
+        duration: 0.8,
         stagger: 0.15,
-        ease: 'power3.out',
-        delay: 0.2
+        delay: 0.3,
       })
-
-      // Parallax for visual elements
-      gsap.to('.hero-visual-layer-1', {
-        y: -50,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: 'top top',
-          end: 'bottom top',
-          scrub: true
-        }
+      gsap.from('.hero-stat-pill', {
+        autoAlpha: 0,
+        y: 20,
+        duration: 0.6,
+        stagger: 0.1,
+        delay: 0.4,
       })
-      
-      gsap.to('.hero-visual-layer-2', {
-        y: -25,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: 'top top',
-          end: 'bottom top',
-          scrub: true
-        }
-      })
-      
-      // Floating animation for devices
-      gsap.to('.floating-element', {
-        y: '-=15',
-        duration: 2.5,
-        yoyo: true,
-        repeat: -1,
-        ease: 'sine.inOut',
-        stagger: {
-          each: 0.5,
-          from: 'random'
-        }
-      })
-
-    }, containerRef)
-
-    return () => ctx.revert()
-  }, [])
+    })
+    return () => mm.revert()
+  }, { scope: ref, dependencies: [dir], revertOnUpdate: true })
 
   return (
-    <section 
-      id="hero" 
-      ref={containerRef}
-      className="relative min-h-screen flex items-center bg-[#0B0B0F] overflow-hidden pt-24 pb-16"
-      dir={dir}
-    >
-       <div className="container mx-auto px-4 lg:px-8 max-w-7xl relative z-10">
-         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
-           {/* Text Content */}
-           <div ref={textRef} className="w-full lg:w-1/2 flex flex-col items-start text-start">
-             <span className="hero-text-anim inline-block py-1.5 px-4 rounded-full bg-purple-900/30 text-purple-300 text-sm font-medium mb-6 border border-purple-800/50">
-               {t.hero.storeName}
-             </span>
-             
-             <h1 className="hero-text-anim text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-[1.15] tracking-tight">
-               {t.hero.tagline}
-             </h1>
-             
-             <p className="hero-text-anim text-xl md:text-2xl text-gray-300 mb-4 max-w-xl">
-               {t.hero.subtitle}
-             </p>
-             
-             <p className="hero-text-anim text-sm text-gray-400 mb-10 max-w-xl leading-relaxed">
-               {t.hero.helper}
-             </p>
-             
-             <div className="hero-text-anim flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-               <a 
-                 href="#contact" 
-                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-[#0B0B0F]"
-               >
-                 <Zap className="w-5 h-5" />
-                 <span>{t.hero.ctaPrimary}</span>
-               </a>
-               
-               <a 
-                 href="#business" 
-                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent border border-gray-700 hover:border-gray-500 hover:bg-gray-800/50 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-[#0B0B0F]"
-               >
-                 <Briefcase className="w-5 h-5" />
-                 <span>{t.hero.ctaBusiness}</span>
-               </a>
-             </div>
-           </div>
+    <section id="hero" ref={ref} className="hero-scene">
+      <div className="page-shell hero-grid">
+        <div className="hero-copy">
+          <div className="eyebrow">
+            <span className="status-dot" />
+            {t.hero.storeName}
+            <span className="eyebrow-divider" />
+            {ar ? 'صنعاء، اليمن' : 'Sana’a, Yemen'}
+          </div>
 
-           {/* Visual Area Placeholder */}
-           <div ref={visualRef} className="w-full lg:w-1/2 relative h-[50vh] lg:h-[70vh] flex items-center justify-center mt-8 lg:mt-0">
-             {/* Glows */}
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[400px] h-[300px] md:h-[400px] bg-purple-600/20 blur-[100px] rounded-full pointer-events-none" />
-             <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] bg-indigo-600/20 blur-[80px] rounded-full pointer-events-none" />
-             
-             {/* Composition */}
-             <div className="relative w-full max-w-md aspect-square hero-visual-layer-1">
-               {/* Background Monitor (Layer 2) */}
-               <div className="absolute top-[10%] right-[5%] w-[70%] h-[55%] bg-gray-900/80 border border-gray-700 rounded-lg shadow-xl backdrop-blur-sm -z-10 hero-visual-layer-2 floating-element">
-                 <div className="w-full h-full border border-purple-900/30 rounded-lg flex items-center justify-center">
-                    <div className="w-1/2 h-1/2 rounded-full bg-purple-500/5 blur-2xl" />
-                 </div>
-               </div>
+          <h1>
+            {ar ? 'تقنيتك،' : 'Your tech.'}
+            <br />
+            <span>{ar ? 'تعمل معًا.' : 'In sync.'}</span>
+          </h1>
 
-               {/* Main Laptop */}
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[60%] bg-[#111116] border border-gray-700 rounded-lg shadow-2xl flex flex-col overflow-hidden z-20">
-                 <div className="flex-1 bg-gradient-to-br from-gray-800/50 to-gray-900/80 border-b border-gray-700 p-2 flex items-center justify-center relative overflow-hidden">
-                   <div className="absolute inset-0 bg-purple-500/5" />
-                   
-                   {/* Abstract screen content */}
-                   <div className="absolute top-4 left-4 right-4 h-3 bg-gray-700/50 rounded-full w-1/3" />
-                   <div className="absolute top-10 left-4 right-4 h-24 bg-purple-500/10 rounded-lg border border-purple-500/20" />
-                   <div className="absolute top-36 left-4 right-4 h-3 bg-gray-700/50 rounded-full w-2/3" />
-                   <div className="absolute top-42 left-4 right-4 h-3 bg-gray-700/50 rounded-full w-1/2" />
-                 </div>
-                 {/* Keyboard Base */}
-                 <div className="h-5 bg-gray-800 flex justify-center items-start pt-1">
-                   <div className="w-[30%] h-1.5 bg-gray-600 rounded-full" />
-                 </div>
-               </div>
+          <p className="hero-description">
+            {ar
+              ? 'أجهزة ومعدات مدروسة ومفحوصة ببيانات واضحة، وتجهيزات تصنع الفرق في يومك.'
+              : 'Thoughtfully tested devices with transparent data cards and complete hardware setups.'}
+          </p>
 
-               {/* Foreground Mobile (Layer 1) */}
-               <div className="absolute bottom-[15%] left-[10%] w-[22%] h-[40%] bg-gray-900 border border-gray-600 rounded-2xl shadow-2xl z-30 floating-element flex flex-col p-1" style={{ animationDelay: '1s' }}>
-                 <div className="flex-1 border border-gray-700 rounded-xl bg-gradient-to-b from-gray-800 to-gray-900 flex flex-col">
-                    {/* Notch */}
-                    <div className="w-1/3 h-2 bg-gray-950 mx-auto rounded-b-md mb-2" />
-                    {/* Content */}
-                    <div className="flex-1 px-2 flex flex-col gap-2">
-                        <div className="w-full h-8 bg-purple-500/20 rounded-md" />
-                        <div className="w-2/3 h-2 bg-gray-700 rounded-full" />
-                        <div className="w-4/5 h-2 bg-gray-700 rounded-full" />
-                    </div>
-                 </div>
-               </div>
-               
-               {/* Decorative elements */}
-               <div className="absolute top-[25%] left-[20%] w-3 h-3 bg-purple-400 rounded-full shadow-[0_0_12px_rgba(168,85,247,0.9)] z-30 floating-element" style={{ animationDelay: '0.5s' }} />
-               <div className="absolute bottom-[35%] right-[20%] w-2 h-2 bg-indigo-400 rounded-full shadow-[0_0_8px_rgba(129,140,248,0.9)] z-30 floating-element" style={{ animationDelay: '1.5s' }} />
-             </div>
-           </div>
-         </div>
-       </div>
+          <p className="hero-helper">{t.hero.helper}</p>
 
-       {/* Scroll Indicator */}
-       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-gray-500 z-20">
-         <span className="text-xs font-medium tracking-widest uppercase opacity-70">
-           {t.hero.scrollIndicator}
-         </span>
-         <ArrowDown className="w-5 h-5 animate-bounce text-purple-500/70" />
-       </div>
+          {/* Dynamic real stats calculated directly from data */}
+          <div className="flex flex-wrap gap-2.5 my-2">
+            <div className="hero-stat-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs font-semibold text-purple-700 dark:text-purple-300">
+              <Package className="w-4 h-4" />
+              <span>{inStockCount} {ar ? 'جهاز متوفر بالمحل' : 'devices ready in stock'}</span>
+            </div>
+            <div className="hero-stat-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              <span>{totalCategories} {ar ? 'فئات متخصصة' : 'specialized categories'}</span>
+            </div>
+            <div className="hero-stat-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+              <CheckCircle className="w-3.5 h-3.5" />
+              <span>{ar ? '7 فحوصات معتمدة' : '7-Point Verified'}</span>
+            </div>
+          </div>
+
+          <div className="hero-actions">
+            <Link to={`/${language}/shop`} className="action-primary">
+              {ar ? 'تصفح المتجر والكتالوج' : 'Explore Store Catalog'}
+              <Arrow size={21} />
+            </Link>
+            <a href="#setups" className="action-text">
+              {t.hero.ctaPrimary}
+              <Arrow size={18} />
+            </a>
+          </div>
+
+          <div className="hero-assurance">
+            <ShieldCheck size={19} />
+            <span>{ar ? 'فحص كامل قبل التسليم' : 'Full pre-delivery inspection'}</span>
+            <i />
+            <span>{ar ? 'درجات حالة معلنة' : 'Transparent condition grades'}</span>
+            <i />
+            <span>{ar ? 'توافق موثق' : 'Verified compatibility'}</span>
+          </div>
+        </div>
+
+        <div className="hero-art">
+          <div className="hero-orbit" aria-hidden="true" />
+          <span className="art-coordinate" dir="ltr">01 / DATA-FIRST HARDWARE</span>
+          <div className="hero-product">
+            <img
+              src="/images/laptop.webp"
+              alt={ar ? 'لابتوب أعمال مفحوص بشاشة واضحة' : 'Inspected business laptop'}
+              width="1600"
+              height="766"
+              fetchPriority="high"
+            />
+          </div>
+          <div className="hero-detail product-note">
+            <span className="micro-label" dir="ltr">INSPECTED & READY</span>
+            <span>{ar ? 'أداء مفحوص يواكب أفكارك.' : 'Tested performance for your ideas.'}</span>
+            <Sparkles size={18} />
+          </div>
+          <div className="hero-detail hero-headphones">
+            <img
+              src="/images/headphones.webp"
+              width="614"
+              height="680"
+              alt={ar ? 'سماعات وملحقات صوتية متوافقة' : 'Compatible audio accessories'}
+            />
+            <span>{ar ? 'تفاصيل تكمل التجربة' : 'The finishing touches'}</span>
+          </div>
+          <span className="art-caption">
+            {ar ? 'من جهاز واحد… إلى عالم متكامل.' : 'From one device to a connected world.'}
+          </span>
+        </div>
+      </div>
+
+      <div className="page-shell hero-bottom">
+        <a href="#latest-products">
+          <ArrowDown size={18} />
+          {t.hero.scrollIndicator}
+        </a>
+        <span dir="ltr">DEVICES / SETUPS / POSSIBILITIES</span>
+        <span>{ar ? 'تقنية تتكامل. وبيانات موثقة.' : 'Connected tech. Verified data.'}</span>
+      </div>
     </section>
   )
 }

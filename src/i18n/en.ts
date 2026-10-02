@@ -173,5 +173,67 @@ export const en: Translations = {
     supportDescription: 'Issue Description',
     invoiceLabel: 'Invoice Number (Optional)',
     modelLabel: 'Device Model (Optional)'
+  },
+  shop: {
+    title: 'Store & Catalog',
+    subtitle: 'Tested devices, accessories and workstations with transparent hardware specifications',
+    allCategories: 'All Categories',
+    filters: 'Filters',
+    clearFilters: 'Clear Filters',
+    brand: 'Brand',
+    cpu: 'Processor (CPU)',
+    ram: 'Memory (RAM)',
+    storage: 'Storage',
+    condition: 'Condition Grade',
+    inStockOnly: 'In-Stock Only',
+    sortBy: 'Sort by',
+    sortNewest: 'Newest Arrivals',
+    sortBattery: 'Battery Health',
+    noProductsFound: 'No products match your selected filter criteria',
+    resetFilterPrompt: 'Try clearing some filters to explore all available hardware',
+    productsCount: 'products listed',
+    viewDetails: 'View Device Specs',
+    askAboutProduct: 'Inquire About Device',
+    askForPrice: 'Ask for Price',
+    warrantyTBD: 'Determined Upon Order',
+    demoBadge: 'Demo Data',
+    demoDisclaimer: 'This device is displayed as sample demo data for structure validation. Final price and warranty terms are confirmed directly with store management.',
+    conditionLabels: {
+      new: 'Brand New (Sealed)',
+      A: 'Grade A — Like New',
+      B: 'Grade B — Very Good',
+      C: 'Grade C — Value / Fair'
+    },
+    stockLabels: {
+      in_stock: 'In Stock',
+      low: 'Low Stock',
+      order: 'On Pre-order',
+      sold: 'Sold Out'
+    },
+    categories: {
+      laptops: 'Laptops & PCs',
+      displays: 'Displays & Desk Setup',
+      audio: 'Audio & Content Creation',
+      gaming: 'Gaming & Peripherals',
+      network: 'Networking & Wi-Fi',
+      storage: 'Storage',
+      power: 'Power & UPS'
+    }
+  },
+  product: {
+    specsTitle: 'Full Technical Specifications',
+    inspectionTitle: 'Pre-delivery Inspection Report',
+    passedInspection: 'Passed 7-Point Hardware Verification',
+    compatibleTitle: 'Works Seamlessly With (Compatible Gear)',
+    bestForTitle: 'Recommended Use Cases',
+    whatsappDisabledNotice: 'Store WhatsApp number is not configured in the system. Direct messaging will activate once confirmed.',
+    orderViaWhatsApp: 'Inquire on WhatsApp',
+    backToShop: 'Back to Store Catalog',
+    breadcrumbHome: 'Home',
+    breadcrumbShop: 'Store',
+    keySpecs: 'Key Specs',
+    conditionDetails: 'Condition Breakdown',
+    inspectionNotes: 'Technician Inspection Notes'
   }
 };
+

@@ -123,4 +123,48 @@ export interface Translations {
     invoiceLabel: string;
     modelLabel: string;
   };
+  shop: {
+    title: string;
+    subtitle: string;
+    allCategories: string;
+    filters: string;
+    clearFilters: string;
+    brand: string;
+    cpu: string;
+    ram: string;
+    storage: string;
+    condition: string;
+    inStockOnly: string;
+    sortBy: string;
+    sortNewest: string;
+    sortBattery: string;
+    noProductsFound: string;
+    resetFilterPrompt: string;
+    productsCount: string;
+    viewDetails: string;
+    askAboutProduct: string;
+    askForPrice: string;
+    warrantyTBD: string;
+    demoBadge: string;
+    demoDisclaimer: string;
+    conditionLabels: Record<string, string>;
+    stockLabels: Record<string, string>;
+    categories: Record<string, string>;
+  };
+  product: {
+    specsTitle: string;
+    inspectionTitle: string;
+    passedInspection: string;
+    compatibleTitle: string;
+    bestForTitle: string;
+    whatsappDisabledNotice: string;
+    orderViaWhatsApp: string;
+    backToShop: string;
+    breadcrumbHome: string;
+    breadcrumbShop: string;
+    keySpecs: string;
+    conditionDetails: string;
+    inspectionNotes: string;
+  };
 }
+

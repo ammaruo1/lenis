@@ -1,0 +1,187 @@
+[
+  {
+    "id": "study",
+    "slug": "study-bundle",
+    "title": {
+      "ar": "أدرس وأتعلم",
+      "en": "Study & Learn"
+    },
+    "summary": {
+      "ar": "لابتوب خفيف وتخزين سريع للدراسة.",
+      "en": "A light laptop and fast storage for study."
+    },
+    "why": {
+      "ar": "التنقل اليومي بين القاعات وانقطاع الكهرباء يتطلبان جهازًا لا يتجاوز 1.4 كجم ببطارية ممتازة وذاكرة تكفي المتصفح والملفات.",
+      "en": "Daily campus movement requires a sub-1.4kg laptop with dependable battery and responsive memory."
+    },
+    "problemSolved": {
+      "ar": "حل مشكلة ضياع الملفات عند انقطاع التيار وحمل أوزان ثقيلة طوال اليوم.",
+      "en": "Prevents file loss during outages and avoids carrying cumbersome gear all day."
+    },
+    "tiers": [
+      {
+        "id": "study-starter",
+        "name": {
+          "ar": "باقة أساسية",
+          "en": "Essential Tier"
+        },
+        "summary": {
+          "ar": "ثينك باد T490s مع قرص Samsung 980 PRO. توافق القرص مع الجهاز يحتاج تحققًا.",
+          "en": "ThinkPad T490s with Samsung 980 PRO. Drive compatibility needs verification."
+        },
+        "price": {
+          "usd": null,
+          "yer": null
+        },
+        "items": [
+          "lap-thinkpad-t490s-001",
+          "sto-samsung-980-pro-008"
+        ]
+      },
+      {
+        "id": "study-pro",
+        "name": {
+          "ar": "باقة متقدمة",
+          "en": "Advanced Tier"
+        },
+        "summary": {
+          "ar": "لابتوب 16GB رام مع شاحن إضافي ووحدة UPS للراوتر المنزلي",
+          "en": "16GB RAM laptop with extra charger and home router UPS"
+        },
+        "price": {
+          "usd": null,
+          "yer": null
+        },
+        "items": [
+          "lap-latitude-7420-003",
+          "pow-apc-back-ups-650va-009"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "work",
+    "slug": "work-bundle",
+    "title": {
+      "ar": "أعمل وأنجز",
+      "en": "Work & Productivity"
+    },
+    "summary": {
+      "ar": "تجهيز إنتاجية مكتبي متكامل: شاشة خارجية، موزع منافذ USB-C، وحماية طاقة للعمل المستمر.",
+      "en": "Complete desktop productivity: external display, USB-C docking hub, and power surge protection."
+    },
+    "why": {
+      "ar": "مساحة إضافية للشاشة وتجهيز طاقة احتياطية. التوافق وزمن التشغيل يحتاجان تحققًا.",
+      "en": "Extra screen space and backup power. Compatibility and runtime require verification."
+    },
+    "problemSolved": {
+      "ar": "إنهاء فوضى الكابلات المتعددة وفقدان العمل المكتبي غير المحفوظ عند انقطاع الشبكة الكهربائية.",
+      "en": "Eliminates cable mess and stops unsaved workplace data loss during power cuts."
+    },
+    "tiers": [
+      {
+        "id": "work-pro",
+        "name": {
+          "ar": "باقة الإنتاجية المتكاملة",
+          "en": "Full Productivity Setup"
+        },
+        "summary": {
+          "ar": "لابتوب أعمال i7 مع شاشة Hub 2K ووحدة طاقة UPS لحماية بيئة العمل",
+          "en": "Core i7 business laptop, 2K Hub monitor, and UPS backup unit"
+        },
+        "price": {
+          "usd": null,
+          "yer": null
+        },
+        "items": [
+          "lap-elitebook-840-g7-002",
+          "disp-dell-u2722de-004",
+          "pow-apc-back-ups-650va-009"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "content",
+    "slug": "content-bundle",
+    "title": {
+      "ar": "أصنع محتوى",
+      "en": "Content Creation"
+    },
+    "summary": {
+      "ar": "محطة عمل متنقلة، سماعة بميكروفون، وتخزين سريع.",
+      "en": "A mobile workstation, headset with microphone, and fast storage."
+    },
+    "why": {
+      "ar": "جودة الصوت تؤثر في المشاهد أكثر من دقة الصورة، والمونتاج يتطلب قراءة رندر سريعة دون تقطيع.",
+      "en": "Clean audio retains viewers, while rapid storage eliminates timeline rendering lag."
+    },
+    "problemSolved": {
+      "ar": "تجنب صدى الصوت والضوضاء المحيطة وتسريع تصدير ملفات الفيديو بدقة 4K.",
+      "en": "Mitigates background room noise and speeds up 4K video rendering timelines."
+    },
+    "tiers": [
+      {
+        "id": "content-creator",
+        "name": {
+          "ar": "باقة الاستوديو المكتبي",
+          "en": "Desk Studio Package"
+        },
+        "summary": {
+          "ar": "ثينك باد P1 مع سماعة Logitech G432 وقرص Samsung 980 PRO.",
+          "en": "ThinkPad P1 with Logitech G432 and Samsung 980 PRO."
+        },
+        "price": {
+          "usd": null,
+          "yer": null
+        },
+        "items": [
+          "lap-thinkpad-p1-gen4-010",
+          "aud-logitech-g432-005",
+          "sto-samsung-980-pro-008"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "gaming",
+    "slug": "gaming-bundle",
+    "title": {
+      "ar": "ألعب وأستمتع",
+      "en": "Gaming & Immersion"
+    },
+    "summary": {
+      "ar": "لابتوب ASUS للألعاب مع منظومة اتصال TP-Link.",
+      "en": "An ASUS gaming laptop with TP-Link connectivity."
+    },
+    "why": {
+      "ar": "التجربة تعتمد على التوافق بين عدد الإطارات ومعدل تحديث الشاشة، مع استقرار استجابة البينج للشبكة.",
+      "en": "Smooth gameplay relies on balanced FPS, monitor refresh rates, and low ping network stability."
+    },
+    "problemSolved": {
+      "ar": "تجهيز مقترح للألعاب؛ استقرار الشبكة يُختبر في موقع الاستخدام.",
+      "en": "A suggested gaming setup; network stability is tested at the installation site."
+    },
+    "tiers": [
+      {
+        "id": "gaming-rig",
+        "name": {
+          "ar": "باقة الأداء السريع",
+          "en": "High Performance Rig"
+        },
+        "summary": {
+          "ar": "Zephyrus G14 مع Deco X50. التوافق الشبكي يحتاج تحققًا.",
+          "en": "Zephyrus G14 with Deco X50. Network compatibility needs verification."
+        },
+        "price": {
+          "usd": null,
+          "yer": null
+        },
+        "items": [
+          "gam-asus-rog-zephyrus-g14-006",
+          "net-tplink-deco-x50-007"
+        ]
+      }
+    ]
+  }
+]

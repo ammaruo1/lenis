@@ -1,0 +1,871 @@
+[
+  {
+    "id": "lap-thinkpad-t490s-001",
+    "slug": "lenovo-thinkpad-t490s-i5-8gb-256",
+    "category": "laptops",
+    "brand": "Lenovo",
+    "model": "ThinkPad T490s",
+    "title": {
+      "ar": "لينوفو ثينك باد T490s",
+      "en": "Lenovo ThinkPad T490s"
+    },
+    "summary": {
+      "ar": "لابتوب أعمال خفيف ونحيف بشاشة لمس وهيكل متين للعمل والدراسة",
+      "en": "Slim, durable business laptop with touch display for work and study"
+    },
+    "condition": "A",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "cpu": "Intel Core i5-8265U",
+      "cpuGen": 8,
+      "ramGB": 8,
+      "ramType": "DDR4",
+      "ramUpgradable": false,
+      "storageGB": 256,
+      "storageType": "SSD-NVMe",
+      "display": {
+        "sizeIn": 14,
+        "res": "1920x1080",
+        "touch": true,
+        "hz": 60,
+        "panel": "IPS"
+      },
+      "gpu": "Intel UHD Graphics 620",
+      "batteryHealthPct": null,
+      "ports": [
+        "Thunderbolt 3",
+        "USB-C",
+        "USB-A 3.1 x2",
+        "HDMI 1.4b",
+        "Audio Jack"
+      ],
+      "weightKg": 1.35,
+      "os": "Windows 11 Pro"
+    },
+    "bestFor": [
+      "study",
+      "work"
+    ],
+    "compatibleWith": [
+      "disp-dell-u2722de-004",
+      "pow-apc-back-ups-650va-009"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/lap-thinkpad-t490s-001-960.webp"
+    ],
+    "tags": [
+      "touch",
+      "light",
+      "business",
+      "thinkpad"
+    ],
+    "demo": true,
+    "connections": [
+      {
+        "targetId": "disp-dell-u2722de-004",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "pow-apc-back-ups-650va-009",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  },
+  {
+    "id": "lap-elitebook-840-g7-002",
+    "slug": "hp-elitebook-840-g7-i7-16gb-512",
+    "category": "laptops",
+    "brand": "HP",
+    "model": "EliteBook 840 G7",
+    "title": {
+      "ar": "إتش بي إيليت بوك 840 G7",
+      "en": "HP EliteBook 840 G7"
+    },
+    "summary": {
+      "ar": "لابتوب أعمال أنيق بهيكل ألومنيوم وأداء قوي مع معالج Core i7 وذاكرة 16GB",
+      "en": "Premium aluminum business laptop with Core i7 performance and 16GB RAM"
+    },
+    "condition": "A",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "cpu": "Intel Core i7-10610U",
+      "cpuGen": 10,
+      "ramGB": 16,
+      "ramType": "DDR4",
+      "ramUpgradable": true,
+      "storageGB": 512,
+      "storageType": "SSD-NVMe",
+      "display": {
+        "sizeIn": 14,
+        "res": "1920x1080",
+        "touch": false,
+        "hz": 60,
+        "panel": "IPS Anti-glare"
+      },
+      "gpu": "Intel UHD Graphics",
+      "batteryHealthPct": null,
+      "ports": [
+        "Thunderbolt 3 x2",
+        "USB-A 3.1 x2",
+        "HDMI 1.4",
+        "Audio Jack"
+      ],
+      "weightKg": 1.33,
+      "os": "Windows 11 Pro"
+    },
+    "bestFor": [
+      "work",
+      "study"
+    ],
+    "compatibleWith": [
+      "disp-dell-u2722de-004",
+      "pow-apc-back-ups-650va-009"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/lap-elitebook-840-g7-002-960.webp"
+    ],
+    "tags": [
+      "aluminum",
+      "business",
+      "elitebook",
+      "fast"
+    ],
+    "demo": true,
+    "connections": [
+      {
+        "targetId": "disp-dell-u2722de-004",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "pow-apc-back-ups-650va-009",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  },
+  {
+    "id": "lap-latitude-7420-003",
+    "slug": "dell-latitude-7420-i5-16gb-256",
+    "category": "laptops",
+    "brand": "Dell",
+    "model": "Latitude 7420",
+    "title": {
+      "ar": "ديل لاتيتيود 7420",
+      "en": "Dell Latitude 7420"
+    },
+    "summary": {
+      "ar": "جهاز أعمال فائق الاعتمادية بجيل حديث، مناسب للمهام المكتبية والتنقل المستمر",
+      "en": "Highly reliable modern business notebook built for mobile productivity"
+    },
+    "condition": "B",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "cpu": "Intel Core i5-1145G7",
+      "cpuGen": 11,
+      "ramGB": 16,
+      "ramType": "LPDDR4x",
+      "ramUpgradable": false,
+      "storageGB": 256,
+      "storageType": "SSD-NVMe",
+      "display": {
+        "sizeIn": 14,
+        "res": "1920x1080",
+        "touch": false,
+        "hz": 60,
+        "panel": "ComfortView Plus IPS"
+      },
+      "gpu": "Intel Iris Xe Graphics",
+      "batteryHealthPct": null,
+      "ports": [
+        "Thunderbolt 4 x2",
+        "USB-A 3.2",
+        "HDMI 2.0",
+        "MicroSD",
+        "Audio Jack"
+      ],
+      "weightKg": 1.22,
+      "os": "Windows 11 Pro"
+    },
+    "bestFor": [
+      "work"
+    ],
+    "compatibleWith": [
+      "disp-dell-u2722de-004",
+      "pow-apc-back-ups-650va-009"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/lap-latitude-7420-003-960.webp"
+    ],
+    "tags": [
+      "dell",
+      "latitude",
+      "iris-xe",
+      "lightweight"
+    ],
+    "demo": true,
+    "connections": [
+      {
+        "targetId": "disp-dell-u2722de-004",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "pow-apc-back-ups-650va-009",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  },
+  {
+    "id": "disp-dell-u2722de-004",
+    "slug": "dell-ultrasharp-u2722de-27-qhd-usbc",
+    "category": "displays",
+    "brand": "Dell",
+    "model": "UltraSharp U2722DE",
+    "title": {
+      "ar": "شاشة ديل ألترا شارب 27 بوصة U2722DE",
+      "en": "Dell UltraSharp 27\" U2722DE Hub Monitor"
+    },
+    "summary": {
+      "ar": "شاشة إنتاجية بدقة 2K مع موزع منافذ USB-C وشحن PD 90W ومنفذ شبكة RJ45 مدمج",
+      "en": "2K QHD productivity hub monitor with 90W USB-C PD and integrated RJ45 Ethernet"
+    },
+    "condition": "new",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "display": {
+        "sizeIn": 27,
+        "res": "2560x1440",
+        "touch": false,
+        "hz": 60,
+        "panel": "IPS"
+      },
+      "panel": "IPS Black",
+      "colorGamut": "100% sRGB, 95% DCI-P3",
+      "usbCPdWatts": 90,
+      "heightAdjustable": true,
+      "ports": [
+        "USB-C upstream (90W PD)",
+        "DisplayPort 1.4",
+        "HDMI 1.4",
+        "RJ45 Ethernet",
+        "USB-A 3.2 x4",
+        "Audio out"
+      ],
+      "weightKg": 4.78
+    },
+    "bestFor": [
+      "work",
+      "content"
+    ],
+    "compatibleWith": [
+      "lap-thinkpad-t490s-001",
+      "lap-elitebook-840-g7-002",
+      "lap-latitude-7420-003"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/disp-dell-u2722de-004-960.webp"
+    ],
+    "tags": [
+      "monitor",
+      "qhd",
+      "usbc-hub",
+      "color-accurate"
+    ],
+    "demo": true,
+    "connections": [
+      {
+        "targetId": "lap-thinkpad-t490s-001",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "lap-elitebook-840-g7-002",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "lap-latitude-7420-003",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  },
+  {
+    "id": "aud-logitech-g432-005",
+    "slug": "logitech-g432-wired-gaming-headset",
+    "category": "audio",
+    "brand": "Logitech",
+    "model": "G432",
+    "title": {
+      "ar": "سماعة لوجيتك G432 للألعاب",
+      "en": "Logitech G432 Wired Gaming Headset"
+    },
+    "summary": {
+      "ar": "سماعة ألعاب سلكية بميكروفون قابل للرفع واتصال USB أو 3.5 مم.",
+      "en": "Wired gaming headset with a flip-to-mute microphone and USB or 3.5 mm connectivity."
+    },
+    "condition": "new",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "connectionType": "USB / 3.5 mm",
+      "frequencyResponse": "20 Hz – 20 kHz",
+      "ports": [
+        "USB",
+        "3.5 mm"
+      ],
+      "weightKg": 0.259
+    },
+    "bestFor": [
+      "content",
+      "work"
+    ],
+    "compatibleWith": [
+      "lap-thinkpad-t490s-001",
+      "lap-elitebook-840-g7-002"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/aud-logitech-g432-005-960.webp"
+    ],
+    "tags": [
+      "audio",
+      "microphone",
+      "podcast",
+      "streaming"
+    ],
+    "demo": true,
+    "specSources": [
+      "https://www.logitechg.com/en-us/shop/p/g432-7-1-surround-sound-gaming-headset"
+    ],
+    "connections": [
+      {
+        "targetId": "lap-thinkpad-t490s-001",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "lap-elitebook-840-g7-002",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  },
+  {
+    "id": "gam-asus-rog-zephyrus-g14-006",
+    "slug": "asus-rog-zephyrus-g14-ryzen9-rtx3060",
+    "category": "gaming",
+    "brand": "ASUS",
+    "model": "ROG Zephyrus G14",
+    "title": {
+      "ar": "أسوس روج زيفيروس G14 للألعاب وصناعة المحتوى",
+      "en": "ASUS ROG Zephyrus G14 Gaming Laptop"
+    },
+    "summary": {
+      "ar": "قوة ألعاب وتصميم هائلة في حجم 14 بوصة مع معالج Ryzen 9 وشاشة 144Hz وكرت RTX 3060",
+      "en": "Compact gaming beast with AMD Ryzen 9, 144Hz display, and NVIDIA RTX 3060"
+    },
+    "condition": "A",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "cpu": "AMD Ryzen 9 5900HS",
+      "cpuGen": 5,
+      "ramGB": 16,
+      "ramType": "DDR4 3200MHz",
+      "ramUpgradable": true,
+      "storageGB": 1000,
+      "storageType": "SSD-NVMe Gen3",
+      "display": {
+        "sizeIn": 14,
+        "res": "1920x1080",
+        "touch": false,
+        "hz": 144,
+        "panel": "IPS 100% sRGB"
+      },
+      "gpu": "NVIDIA GeForce RTX 3060 6GB GDDR6",
+      "batteryHealthPct": null,
+      "ports": [
+        "USB-C 3.2 Gen 2 (PD)",
+        "USB-C 3.2 Gen 2 (DP)",
+        "USB-A 3.2 x2",
+        "HDMI 2.0b",
+        "Audio Jack"
+      ],
+      "weightKg": 1.7,
+      "os": "Windows 11 Home"
+    },
+    "bestFor": [
+      "gaming",
+      "content"
+    ],
+    "compatibleWith": [
+      "disp-dell-u2722de-004",
+      "pow-apc-back-ups-650va-009"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/gam-asus-rog-zephyrus-g14-006-960.webp"
+    ],
+    "tags": [
+      "gaming",
+      "rog",
+      "rtx",
+      "high-refresh",
+      "compact"
+    ],
+    "demo": true,
+    "connections": [
+      {
+        "targetId": "disp-dell-u2722de-004",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "pow-apc-back-ups-650va-009",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  },
+  {
+    "id": "net-tplink-deco-x50-007",
+    "slug": "tp-link-deco-x50-mesh-wifi6-pack",
+    "category": "network",
+    "brand": "TP-Link",
+    "model": "Deco X50 (2-Pack)",
+    "title": {
+      "ar": "تي بي لينك ديكو X50 منظومة واي فاي 6 شبكية Mesh",
+      "en": "TP-Link Deco X50 AX3000 Whole Home Mesh Wi-Fi 6"
+    },
+    "summary": {
+      "ar": "تغطية واي فاي منزلية ومكتبية سلسة تلغي النقاط الميتة وتتحمل أكثر من 150 جهازًا متزامنًا",
+      "en": "Seamless whole-home Wi-Fi 6 mesh coverage eliminating dead zones for 150+ devices"
+    },
+    "condition": "new",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "wifiStandard": "Wi-Fi 6 (802.11ax)",
+      "speedMbps": 3000,
+      "portsCount": 3,
+      "meshSupport": true,
+      "ports": [
+        "Gigabit WAN/LAN Auto-sensing x3 per unit"
+      ],
+      "weightKg": 0.82
+    },
+    "bestFor": [
+      "work",
+      "study"
+    ],
+    "compatibleWith": [
+      "pow-apc-back-ups-650va-009"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/net-tplink-deco-x50-007-960.webp"
+    ],
+    "tags": [
+      "mesh",
+      "wifi6",
+      "networking",
+      "tplink",
+      "coverage"
+    ],
+    "demo": true,
+    "connections": [
+      {
+        "targetId": "pow-apc-back-ups-650va-009",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  },
+  {
+    "id": "sto-samsung-980-pro-008",
+    "slug": "samsung-980-pro-1tb-nvme-pcie4",
+    "category": "storage",
+    "brand": "Samsung",
+    "model": "980 PRO 1TB",
+    "title": {
+      "ar": "سامسونج 980 برو قرص تخزين سريع 1TB M.2 NVMe",
+      "en": "Samsung 980 PRO 1TB PCIe Gen 4.0 x4 M.2 NVMe SSD"
+    },
+    "summary": {
+      "ar": "أداء قراءة يصل إلى 7000MB/s مثالي لتسريع إقلاع النظام والمونتاج وألعاب الجيل الجديد",
+      "en": "Blazing fast read speeds up to 7000MB/s ideal for OS responsiveness and gaming"
+    },
+    "condition": "new",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "capacityGB": 1000,
+      "storageType": "PCIe Gen 4.0 x4 NVMe 1.3c",
+      "readSpeedMBs": 7000,
+      "writeSpeedMBs": 5000,
+      "interface": "M.2 2280",
+      "weightKg": 0.01
+    },
+    "bestFor": [
+      "work",
+      "content",
+      "gaming"
+    ],
+    "compatibleWith": [
+      "lap-elitebook-840-g7-002",
+      "gam-asus-rog-zephyrus-g14-006"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/sto-samsung-980-pro-008-960.webp"
+    ],
+    "tags": [
+      "ssd",
+      "nvme",
+      "pcie4",
+      "samsung",
+      "high-speed"
+    ],
+    "demo": true,
+    "connections": [
+      {
+        "targetId": "lap-elitebook-840-g7-002",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "gam-asus-rog-zephyrus-g14-006",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  },
+  {
+    "id": "pow-apc-back-ups-650va-009",
+    "slug": "demo-ups-650va",
+    "category": "power",
+    "brand": "غير محددة",
+    "model": "UPS 650VA (demo)",
+    "title": {
+      "ar": "وحدة طاقة احتياطية وحماية UPS قدرة 650VA / 360W",
+      "en": "Demo UPS 650VA / 360W — brand unconfirmed"
+    },
+    "summary": {
+      "ar": "حماية الراوتر ومحطة العمل والشاشات من تذبذب الكهرباء وانقطاع التيار المفاجئ في صنعاء",
+      "en": "Protects workstations, monitors and routers from voltage spikes and sudden outages"
+    },
+    "condition": "new",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "capacityVA": 650,
+      "capacityWatts": 360,
+      "waveType": "Stepped approximation to a sinewave",
+      "outletsCount": 4,
+      "ports": [
+        "Universal Battery Backup + Surge Sockets x4"
+      ],
+      "weightKg": 4.5
+    },
+    "bestFor": [
+      "study",
+      "work"
+    ],
+    "compatibleWith": [
+      "lap-thinkpad-t490s-001",
+      "net-tplink-deco-x50-007",
+      "disp-dell-u2722de-004"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/ups-illustration.svg"
+    ],
+    "tags": [
+      "ups",
+      "power",
+      "avr",
+      "surge-protection",
+      "outage"
+    ],
+    "demo": true,
+    "connections": [
+      {
+        "targetId": "lap-thinkpad-t490s-001",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "net-tplink-deco-x50-007",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "disp-dell-u2722de-004",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  },
+  {
+    "id": "lap-thinkpad-p1-gen4-010",
+    "slug": "lenovo-thinkpad-p1-gen4-i7-32gb-1tb-rtx",
+    "category": "laptops",
+    "brand": "Lenovo",
+    "model": "ThinkPad P1 Gen 4",
+    "title": {
+      "ar": "لينوفو ثينك باد P1 الجيل الرابع محطة عمل متنقلة",
+      "en": "Lenovo ThinkPad P1 Gen 4 Mobile Workstation"
+    },
+    "summary": {
+      "ar": "ورك ستيشن احترافي بشاشة 16 بوصة 2.5K وكرت RTX وذاكرة 32GB لمهام الهندسة والمونتاج",
+      "en": "Elite 16-inch mobile workstation with RTX graphics and 32GB RAM for engineering"
+    },
+    "condition": "A",
+    "warrantyMonths": null,
+    "price": {
+      "usd": null,
+      "yer": null,
+      "updatedAt": null,
+      "negotiable": false
+    },
+    "stock": "in_stock",
+    "specs": {
+      "cpu": "Intel Core i7-11850H",
+      "cpuGen": 11,
+      "ramGB": 32,
+      "ramType": "DDR4 3200MHz",
+      "ramUpgradable": true,
+      "storageGB": 1000,
+      "storageType": "SSD-NVMe PCIe Gen4",
+      "display": {
+        "sizeIn": 16,
+        "res": "2560x1600",
+        "touch": false,
+        "hz": 60,
+        "panel": "IPS 400 nits 16:10 100% sRGB"
+      },
+      "gpu": "NVIDIA RTX A2000 4GB GDDR6",
+      "batteryHealthPct": null,
+      "ports": [
+        "Thunderbolt 4 x2",
+        "USB-A 3.2 Gen 1 x2",
+        "HDMI 2.1",
+        "SD Card Reader",
+        "Audio Jack"
+      ],
+      "weightKg": 1.81,
+      "os": "Windows 11 Pro"
+    },
+    "bestFor": [
+      "work",
+      "content"
+    ],
+    "compatibleWith": [
+      "disp-dell-u2722de-004",
+      "pow-apc-back-ups-650va-009"
+    ],
+    "inspection": {
+      "passed": false,
+      "date": null,
+      "notes": {
+        "ar": "نموذج تجريبي؛ الفحص الفعلي ينتظر جهاز المتجر.",
+        "en": "Demo model; physical inspection awaits store inventory."
+      }
+    },
+    "images": [
+      "/images/products/lap-thinkpad-p1-gen4-010-960.webp"
+    ],
+    "tags": [
+      "workstation",
+      "thinkpad",
+      "rtx",
+      "creator",
+      "engineering"
+    ],
+    "demo": true,
+    "connections": [
+      {
+        "targetId": "disp-dell-u2722de-004",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      },
+      {
+        "targetId": "pow-apc-back-ups-650va-009",
+        "port": null,
+        "watts": null,
+        "verified": false,
+        "source": null
+      }
+    ]
+  }
+]

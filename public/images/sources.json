@@ -1,0 +1,180 @@
+{
+  "images": [
+    {
+      "productId": "lap-thinkpad-t490s-001",
+      "files": [
+        "/images/products/lap-thinkpad-t490s-001-480.webp",
+        "/images/products/lap-thinkpad-t490s-001-480.avif",
+        "/images/products/lap-thinkpad-t490s-001-960.webp",
+        "/images/products/lap-thinkpad-t490s-001-960.avif",
+        "/images/products/lap-thinkpad-t490s-001-1600.webp",
+        "/images/products/lap-thinkpad-t490s-001-1600.avif",
+        "/images/laptop.webp",
+        "/images/study.webp"
+      ],
+      "source": "https://psrefstuff.lenovo.com/syspool/Sys/Image/ThinkPad/ThinkPad_T490s/ThinkPad_T490s_CT1_01.png",
+      "sourcePage": "https://psref.lenovo.com/Product/ThinkPad/ThinkPad_T490s",
+      "potentialLicense": "Manufacturer copyright; no redistribution permission established. Obtain written permission before commercial publication.",
+      "licensed": false,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    },
+    {
+      "productId": "lap-thinkpad-p1-gen4-010",
+      "files": [
+        "/images/products/lap-thinkpad-p1-gen4-010-480.webp",
+        "/images/products/lap-thinkpad-p1-gen4-010-480.avif",
+        "/images/products/lap-thinkpad-p1-gen4-010-960.webp",
+        "/images/products/lap-thinkpad-p1-gen4-010-960.avif",
+        "/images/products/lap-thinkpad-p1-gen4-010-1600.webp",
+        "/images/products/lap-thinkpad-p1-gen4-010-1600.avif",
+        "/images/laptop-design.webp",
+        "/images/content.webp"
+      ],
+      "source": "https://psrefstuff.lenovo.com/syspool/Sys/Image/ThinkPad/ThinkPad_P1_Gen_4/ThinkPad_P1_Gen_4_CT1_01.png",
+      "sourcePage": "https://psref.lenovo.com/Product/ThinkPad/ThinkPad_P1_Gen_4",
+      "potentialLicense": "Manufacturer copyright; no redistribution permission established. Obtain written permission before commercial publication.",
+      "licensed": false,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    },
+    {
+      "productId": "gam-asus-rog-zephyrus-g14-006",
+      "files": [
+        "/images/products/gam-asus-rog-zephyrus-g14-006-480.webp",
+        "/images/products/gam-asus-rog-zephyrus-g14-006-480.avif",
+        "/images/products/gam-asus-rog-zephyrus-g14-006-960.webp",
+        "/images/products/gam-asus-rog-zephyrus-g14-006-960.avif",
+        "/images/products/gam-asus-rog-zephyrus-g14-006-1600.webp",
+        "/images/products/gam-asus-rog-zephyrus-g14-006-1600.avif",
+        "/images/gaming.webp"
+      ],
+      "source": "https://dlcdnwebimgs.asus.com/gain/87C641FC-4E5F-4073-B739-1C41E2783B96/w1000/h732",
+      "sourcePage": "https://rog.asus.com/ca-en/laptops/rog-zephyrus/2021-rog-zephyrus-g14-series/gallery/",
+      "potentialLicense": "Manufacturer copyright; no redistribution permission established. Obtain written permission before commercial publication.",
+      "licensed": false,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    },
+    {
+      "productId": "aud-logitech-g432-005",
+      "files": [
+        "/images/products/aud-logitech-g432-005-480.webp",
+        "/images/products/aud-logitech-g432-005-480.avif",
+        "/images/products/aud-logitech-g432-005-960.webp",
+        "/images/products/aud-logitech-g432-005-960.avif",
+        "/images/products/aud-logitech-g432-005-1600.webp",
+        "/images/products/aud-logitech-g432-005-1600.avif",
+        "/images/headphones.webp"
+      ],
+      "source": "https://resource.logitechg.com/content/dam/gaming/en/products/g432/2025/g432-3qtr-front-left-angle-gallery-1.png",
+      "sourcePage": "https://www.logitechg.com/en-us/shop/p/g432-7-1-surround-sound-gaming-headset",
+      "potentialLicense": "Manufacturer copyright; no redistribution permission established. Obtain written permission before commercial publication.",
+      "licensed": false,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    },
+    {
+      "productId": "net-tplink-deco-x50-007",
+      "files": [
+        "/images/products/net-tplink-deco-x50-007-480.webp",
+        "/images/products/net-tplink-deco-x50-007-480.avif",
+        "/images/products/net-tplink-deco-x50-007-960.webp",
+        "/images/products/net-tplink-deco-x50-007-960.avif",
+        "/images/products/net-tplink-deco-x50-007-1600.webp",
+        "/images/products/net-tplink-deco-x50-007-1600.avif",
+        "/images/network.webp"
+      ],
+      "source": "https://static.tp-link.com/upload/image-header/Deco_X50(2-pack)_Overview_normal_20211225093625r.png",
+      "sourcePage": "https://www.tp-link.com/us/deco-mesh-wifi/product-family/deco-x50/",
+      "potentialLicense": "Manufacturer copyright; no redistribution permission established. Obtain written permission before commercial publication.",
+      "licensed": false,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    },
+    {
+      "productId": "sto-samsung-980-pro-008",
+      "files": [
+        "/images/products/sto-samsung-980-pro-008-480.webp",
+        "/images/products/sto-samsung-980-pro-008-480.avif",
+        "/images/products/sto-samsung-980-pro-008-960.webp",
+        "/images/products/sto-samsung-980-pro-008-960.avif",
+        "/images/products/sto-samsung-980-pro-008-1600.webp",
+        "/images/products/sto-samsung-980-pro-008-1600.avif",
+        "/images/storage.webp"
+      ],
+      "source": "https://images.samsung.com/is/image/samsung/au-980-pro-nvme-m2-ssd-mz-v8p1t0bw-frontblack-292739022?wid=1600&fmt=png-alpha",
+      "sourcePage": "https://www.samsung.com/au/memory-storage/nvme-ssd/980-pro-pcle-4-0-nvme-m-2-ssd-1tb-mz-v8p1t0bw/",
+      "potentialLicense": "Manufacturer copyright; no redistribution permission established. Obtain written permission before commercial publication.",
+      "licensed": false,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    },
+    {
+      "productId": "pow-apc-back-ups-650va-009",
+      "files": [
+        "/images/products/ups-illustration.svg"
+      ],
+      "source": "Local procedural SVG",
+      "sourcePage": null,
+      "potentialLicense": "Project-authored illustration",
+      "licensed": true,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    },
+    {
+      "productId": "lap-latitude-7420-003",
+      "files": [
+        "/images/products/lap-latitude-7420-003-480.webp",
+        "/images/products/lap-latitude-7420-003-480.avif",
+        "/images/products/lap-latitude-7420-003-960.webp",
+        "/images/products/lap-latitude-7420-003-960.avif",
+        "/images/products/lap-latitude-7420-003-1600.webp",
+        "/images/products/lap-latitude-7420-003-1600.avif"
+      ],
+      "source": "https://i.dell.com/is/image/DellContent//content/dam/ss2/product-images/dell-client-products/notebooks/latitude-notebooks/latitude-14-7420/global-spi/ng/non-touch/notebook-latitude-14-7420-nt-relsize-500-ng.psd?fmt=png-alpha&wid=1000",
+      "sourcePage": "https://www.dell.com/support/product-details/en-us/product/latitude-14-7420-2-in-1-laptop/overview",
+      "potentialLicense": "Manufacturer copyright; redistribution permission not established.",
+      "licensed": false,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    },
+    {
+      "productId": "disp-dell-u2722de-004",
+      "files": [
+        "/images/products/disp-dell-u2722de-004-480.webp",
+        "/images/products/disp-dell-u2722de-004-480.avif",
+        "/images/products/disp-dell-u2722de-004-960.webp",
+        "/images/products/disp-dell-u2722de-004-960.avif",
+        "/images/products/disp-dell-u2722de-004-1600.webp",
+        "/images/products/disp-dell-u2722de-004-1600.avif",
+        "/images/desktop.webp",
+        "/images/display-screen.webp"
+      ],
+      "source": "https://i.dell.com/is/image/DellContent//content/dam/ss2/product-images/peripherals/output-devices/dell/monitors/u-series/u2722de/global-spi/ng/monitor-u2722de-relsize-500-ng.psd?fmt=jpg&hei=367&wid=500",
+      "sourcePage": "https://www.dell.com/support/product-details/en-us/product/dell-u2722de-monitor",
+      "potentialLicense": "Manufacturer copyright; redistribution permission not established.",
+      "licensed": false,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    },
+    {
+      "productId": "lap-elitebook-840-g7-002",
+      "files": [
+        "/images/products/lap-elitebook-840-g7-002-480.webp",
+        "/images/products/lap-elitebook-840-g7-002-480.avif",
+        "/images/products/lap-elitebook-840-g7-002-960.webp",
+        "/images/products/lap-elitebook-840-g7-002-960.avif",
+        "/images/products/lap-elitebook-840-g7-002-1600.webp",
+        "/images/products/lap-elitebook-840-g7-002-1600.avif"
+      ],
+      "source": "https://cdn.panacompu.com/doc/pd/hp-elitebook-840-g7-datasheet.pdf",
+      "sourcePage": "https://www8.hp.com/h20195/v2/GetPDF.aspx/4AA7-6811ENUC.pdf",
+      "manufacturer": "HP",
+      "potentialLicense": "HP manufacturer datasheet 4AA7-6811, mirrored by distributor because HP endpoint is unavailable. Image copyright HP; redistribution permission not established.",
+      "licensed": false,
+      "demoOnly": true,
+      "retrievedAt": "2026-10-02"
+    }
+  ]
+}

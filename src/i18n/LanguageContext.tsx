@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useTransition } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Language, Direction, Translations } from './types'
 import { ar } from './ar'
 import { en } from './en'
@@ -22,28 +23,42 @@ const translationsMap: Record<Language, Translations> = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
-function getInitialLanguage(): Language {
-  if (typeof window === 'undefined') return 'ar'
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved === 'en' || saved === 'ar') return saved
-  } catch {
-    // ignore localStorage errors (e.g. incognito/disabled)
-  }
-  return 'ar' // Default is Arabic as required
-}
-
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(getInitialLanguage)
-  const [, startTransition] = useTransition()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  // Derive language from URL prefix
+  const urlLang: Language = location.pathname.startsWith('/en') ? 'en' : 'ar'
+  const [language, setLanguageState] = useState<Language>(urlLang)
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/en')) {
+      setLanguageState('en')
+    } else if (location.pathname.startsWith('/ar')) {
+      setLanguageState('ar')
+    }
+  }, [location.pathname])
 
   const dir: Direction = language === 'ar' ? 'rtl' : 'ltr'
   const t = translationsMap[language]
 
   const setLanguage = (newLang: Language) => {
-    startTransition(() => {
-      setLanguageState(newLang)
-    })
+    setLanguageState(newLang)
+    try {
+      localStorage.setItem(STORAGE_KEY, newLang)
+    } catch {
+      // ignore
+    }
+
+    let nextPath = location.pathname
+    if (nextPath.startsWith('/ar')) {
+      nextPath = `/${newLang}${nextPath.slice(3)}`
+    } else if (nextPath.startsWith('/en')) {
+      nextPath = `/${newLang}${nextPath.slice(3)}`
+    } else {
+      nextPath = `/${newLang}${nextPath}`
+    }
+    navigate(`${nextPath || `/${newLang}`}${location.search}${location.hash}`)
   }
 
   const toggleLanguage = () => {

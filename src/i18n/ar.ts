@@ -173,5 +173,67 @@ export const ar: Translations = {
     supportDescription: 'وصف المشكلة',
     invoiceLabel: 'رقم الفاتورة (اختياري)',
     modelLabel: 'موديل الجهاز (اختياري)'
+  },
+  shop: {
+    title: 'المتجر والكتالوج',
+    subtitle: 'أجهزة ومعدات ومحطات عمل مفحوصة وموثقة المواصفات',
+    allCategories: 'كل الفئات',
+    filters: 'الفلاتر',
+    clearFilters: 'إعادة ضبط الفلاتر',
+    brand: 'الماركة',
+    cpu: 'المعالج',
+    ram: 'الذاكرة (RAM)',
+    storage: 'التخزين',
+    condition: 'درجة الحالة',
+    inStockOnly: 'المتوفر في المخزن فقط',
+    sortBy: 'ترتيب حسب',
+    sortNewest: 'الأحدث وصولًا',
+    sortBattery: 'حالة البطارية',
+    noProductsFound: 'لم نعثر على منتجات مطابقة لمعايير الفلترة المحددة',
+    resetFilterPrompt: 'جرب إزالة بعض الفلاتر لعرض المنتجات المتاحة',
+    productsCount: 'منتج معروض',
+    viewDetails: 'عرض تفاصيل الجهاز',
+    askAboutProduct: 'اسأل عن الجهاز',
+    askForPrice: 'اسأل عن السعر',
+    warrantyTBD: 'يُحدد عند الطلب',
+    demoBadge: 'بيانات تجريبية',
+    demoDisclaimer: 'هذا المنتج معروض كبيانات تجريبية لأغراض العرض واختبار الهيكل. الأسعار والضمان تُؤكد مع إدارة المتجر مباشرة.',
+    conditionLabels: {
+      new: 'جديد بالكرتون',
+      A: 'A — شبه جديد',
+      B: 'B — جيد جدًا',
+      C: 'C — اقتصادي'
+    },
+    stockLabels: {
+      in_stock: 'متوفر بالمحل',
+      low: 'كمية محدودة',
+      order: 'بالطلب مسبقًا',
+      sold: 'تم البيع'
+    },
+    categories: {
+      laptops: 'لابتوبات وأجهزة',
+      displays: 'شاشات وتجهيز مكتب',
+      audio: 'صوت وصناعة محتوى',
+      gaming: 'ألعاب وملحقات',
+      network: 'شبكات واتصال',
+      storage: 'تخزين',
+      power: 'طاقة وحماية (UPS)'
+    }
+  },
+  product: {
+    specsTitle: 'جدول المواصفات الكامل',
+    inspectionTitle: 'تقرير الفحص المعتمد قبل التسليم',
+    passedInspection: 'اجتاز الفحص الفني المعتمد بنجاح',
+    compatibleTitle: 'يعمل بتوافق مثالي مع (ملحقات مقترحة)',
+    bestForTitle: 'موصى به للاستخدامات التالية',
+    whatsappDisabledNotice: 'رقم واتساب المتجر غير مسجل حاليًا في النظام. ستتاح المراسلة المباشرة فور اعتماد الرقم الرسمي.',
+    orderViaWhatsApp: 'اسأل عن الجهاز عبر واتساب',
+    backToShop: 'العودة إلى المتجر',
+    breadcrumbHome: 'الرئيسية',
+    breadcrumbShop: 'المتجر',
+    keySpecs: 'أبرز المواصفات',
+    conditionDetails: 'تفاصيل درجة الحالة',
+    inspectionNotes: 'ملاحظات الفحص الفني'
   }
 };
+

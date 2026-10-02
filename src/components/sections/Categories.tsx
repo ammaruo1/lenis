@@ -1,75 +1,105 @@
-import React, { useEffect, useRef } from 'react';
-import { useLanguage } from '@/i18n/LanguageContext';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Laptop, Monitor, Mic, Gamepad2, Wifi, HardDrive, Zap } from 'lucide-react';
+import { useRef } from 'react'
+import { Link } from 'react-router-dom'
+import { useGSAP } from '@gsap/react'
+import gsap from 'gsap'
+import { ArrowUpLeft, ArrowUpRight } from 'lucide-react'
+import { useLanguage } from '@/i18n/LanguageContext'
+import productsData from '@/data/products.json'
+import ProductDisplay from '@/components/ui/ProductDisplay'
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(useGSAP)
 
-const ICONS = [Laptop, Monitor, Mic, Gamepad2, Wifi, HardDrive, Zap];
+const images = ['laptop-design', 'desktop', 'headphones', 'gaming', 'network', 'storage', 'power']
 
 export default function Categories() {
-  const { t } = useLanguage();
-  const sectionRef = useRef<HTMLElement>(null);
-  const cardsRef = useRef<HTMLAnchorElement[]>([]);
+  const { t, language, dir } = useLanguage()
+  const ref = useRef<HTMLElement>(null)
+  const ar = language === 'ar'
+  const Arrow = ar ? ArrowUpLeft : ArrowUpRight
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        cardsRef.current,
-        { y: 50, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          stagger: 0.1,
-          duration: 0.8,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 80%',
-          }
-        }
-      );
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
+  useGSAP(() => {
+    const mm = gsap.matchMedia()
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // Phase 1 Motion: Simple reveal without scrub
+      gsap.utils.toArray<HTMLElement>('.category-card').forEach((card, i) => {
+        gsap.from(card, {
+          y: 35,
+          opacity: 0,
+          duration: 0.7,
+          delay: (i % 3) * 0.08,
+          ease: 'power2.out',
+          scrollTrigger: { trigger: card, start: 'top 92%', once: true },
+        })
+      })
+    })
+    return () => mm.revert()
+  }, { scope: ref, dependencies: [dir], revertOnUpdate: true })
 
   return (
-    <section id="categories" ref={sectionRef} className="py-24 bg-[#0B0B0F] text-white">
-      <div className="container mx-auto px-4 md:px-8 max-w-7xl">
-        <h2 className="text-3xl md:text-5xl font-bold mb-12 text-center">
-          {t.categories.title}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {t.categories.items.map((item, index) => {
-            const Icon = ICONS[index % ICONS.length];
-            const isLarge = index < 2;
+    <section id="categories" ref={ref} className="categories-section section-space">
+      <div className="page-shell">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">
+              <span className="section-index">03</span>
+              {ar ? 'عالم من الإمكانيات' : 'A WORLD OF POSSIBILITIES'}
+            </div>
+            <h2>{t.categories.title}</h2>
+          </div>
+          <p>
+            {ar
+              ? 'كل ما تحتاجه، ليعمل عالمك معًا ببيانات ومواصفات دقيقة.'
+              : 'Everything you need to bring your world together with clear hardware data.'}
+          </p>
+        </div>
+
+        <div className="category-grid">
+          {t.categories.items.map((c, i) => {
+            // Dynamically calculate product count for this category from productsData
+            const count = productsData.filter((p) => p.category === c.id).length
+
             return (
-              <a
-                key={item.id}
-                href={`#contact`}
-                ref={(el) => {
-                  if (el) cardsRef.current[index] = el;
-                }}
-                className={`group block p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all duration-300 transform hover:-translate-y-1 ${
-                  isLarge ? 'md:col-span-2 lg:col-span-2' : 'md:col-span-1 lg:col-span-1'
-                }`}
+              <Link
+                key={c.id}
+                to={`/${language}/shop/${c.id}`}
+                className={`category-card category-${i}`}
               >
-                <div className="flex items-start gap-4 h-full flex-col sm:flex-row">
-                  <div className="p-4 rounded-xl bg-purple-500/20 text-purple-400 group-hover:scale-110 group-hover:bg-purple-500/30 transition-all duration-300 shrink-0">
-                    <Icon size={32} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl md:text-2xl font-bold mb-2">{item.name}</h3>
-                    <p className="text-gray-400 leading-relaxed">{item.description}</p>
-                  </div>
+                <div className="flex items-center justify-between w-full">
+                  <span className="category-number" dir="ltr">
+                    / 0{i + 1}
+                  </span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300">
+                    {count} {ar ? 'منتج' : 'items'}
+                  </span>
                 </div>
-              </a>
-            );
+
+                <span className="category-arrow">
+                  <Arrow size={21} />
+                </span>
+
+                <div className="category-image">
+                  {i === 1 ? (
+                    <ProductDisplay label={c.name} />
+                  ) : (
+                    <img
+                      src={`/images/${images[i]}.webp`}
+                      alt={c.name}
+                      width="900"
+                      height="600"
+                      loading="lazy"
+                    />
+                  )}
+                </div>
+
+                <div className="category-copy">
+                  <h3>{c.name}</h3>
+                  <p>{c.description}</p>
+                </div>
+              </Link>
+            )
           })}
         </div>
       </div>
     </section>
-  );
-};
+  )
+}

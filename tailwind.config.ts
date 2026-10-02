@@ -9,9 +9,11 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)', 'Cairo', 'Inter', 'system-ui', 'sans-serif'],
-        cairo: ['Cairo', 'system-ui', 'sans-serif'],
-        inter: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['LinaRound', 'MPLUSRounded1c', 'Cairo', 'Inter', 'system-ui', 'sans-serif'],
+        cairo: ['LinaRound', 'Cairo', 'system-ui', 'sans-serif'],
+        inter: ['MPLUSRounded1c', 'Inter', 'system-ui', 'sans-serif'],
+        arabic: ['LinaRound', 'Cairo', 'sans-serif'],
+        english: ['MPLUSRounded1c', 'Inter', 'sans-serif'],
       },
       colors: {
         background: '#0B0B0F',
