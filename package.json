@@ -21,7 +21,9 @@
     "db:generate": "npm run db:generate -w @aljeel/server",
     "db:migrate": "npm run db:migrate -w @aljeel/server",
     "seed:owner": "npm run seed:owner -w @aljeel/server",
-    "env:init": "node scripts/admin/init-env.mjs"
+    "env:init": "node scripts/admin/init-env.mjs",
+    "dev:local": "node scripts/admin/local-dev.mjs",
+    "db:local:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/admin/local-postgres.ps1 -Action Stop"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

@@ -12,7 +12,9 @@ docker compose -f docker-compose.dev.yml exec -it api npm run seed:owner
 
 Open http://localhost:5174/admin/. The seed prompts for the real owner's name and email, then asks for a hidden password. Press Enter at the password prompt to generate a cryptographically random password printed once. The owner must change it on first login. No account is created by migration or `env:init`. The seed refuses a second initial owner; additional staff are created through the owner's Team screen.
 
-For host development, start only PostgreSQL, then migrate and start two terminals:
+On Windows with PostgreSQL installed, `npm run dev:local` starts a persistent local development database and both applications without Docker. See [the Windows local runbook](ADMIN-LOCAL-WINDOWS.md). It prefers drive E for database storage, binds to loopback, and preserves data on shutdown. Run `npm run seed:owner` in a second terminal to create the real owner.
+
+For host development using a Docker database, start only PostgreSQL, then migrate and start two terminals:
 
 ```sh
 docker compose -f docker-compose.dev.yml up -d postgres
