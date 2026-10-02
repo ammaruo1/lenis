@@ -1,0 +1,14 @@
+name: aljeel-admin-test
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aljeel_test
+      POSTGRES_DB: aljeel_test
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:?Set a random TEST_POSTGRES_PASSWORD}
+    ports: ["127.0.0.1:5433:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aljeel_test -d aljeel_test"]
+      interval: 2s
+      retries: 20
