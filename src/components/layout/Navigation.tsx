@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '@/i18n/LanguageContext'
 import { useTheme } from '@/i18n/ThemeContext'
-import { Menu, X, Globe, Sun, Moon, ShoppingBag } from 'lucide-react'
+import { Menu, X, Globe, Sun, Moon, ShoppingBag, User } from 'lucide-react'
 import { scrollTo as scrollPage, setScrollLocked } from '@/hooks/useLenis'
+import { shopApi, type Preview } from '@/data/commerce'
 import SkipLink from './SkipLink'
 
 export default function Navigation() {
@@ -16,14 +17,30 @@ export default function Navigation() {
   const menuRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   const navigate = useNavigate()
+  const [cartCount, setCartCount] = useState(0)
+
+  useEffect(() => {
+    const updateCartCount = () => {
+      shopApi<Preview>('/cart')
+        .then((res) => {
+          const count = res.rawLines?.reduce((sum, line) => sum + (line.quantity || 1), 0) ?? 0
+          setCartCount(count)
+        })
+        .catch(() => {})
+    }
+    updateCartCount()
+    window.addEventListener('store-cart-changed', updateCartCount)
+    return () => window.removeEventListener('store-cart-changed', updateCartCount)
+  }, [])
 
   const isHomePage = location.pathname === `/${language}` || location.pathname === `/${language}/`
 
   const navLinks = [
     { id: 'shop', label: t.shop.title, path: `/${language}/shop`, isRoute: true },
-    { id: 'cart', label: language === 'ar' ? 'السلة' : 'Cart', path: `/${language}/cart`, isRoute: true },
+    { id: 'bundles', label: language === 'ar' ? 'الباقات والتجهيزات' : 'Bundles', path: `/${language}/bundles`, isRoute: true },
+    { id: 'business', label: language === 'ar' ? 'حلول الشركات' : 'Business', path: `/${language}/business`, isRoute: true },
+    { id: 'compare', label: language === 'ar' ? 'المقارنة' : 'Compare', path: `/${language}/compare`, isRoute: true },
     { id: 'warranty', label: language === 'ar' ? 'الضمان والفحص' : 'Warranty', path: `/${language}/warranty`, isRoute: true },
-    { id: 'faq', label: language === 'ar' ? 'الأسئلة الشائعة' : 'FAQ', path: `/${language}/faq`, isRoute: true },
     { id: 'about', label: language === 'ar' ? 'من نحن' : 'About', path: `/${language}/about`, isRoute: true },
     { id: 'contact', label: t.nav.contactUs, path: `/${language}/contact`, isRoute: true }
   ]
@@ -145,10 +162,12 @@ export default function Navigation() {
                       <Link
                         to={link.path}
                         className={`text-sm font-medium transition-colors hover:text-purple-600 inline-flex items-center gap-1.5 ${
-                          location.pathname.includes('/shop') ? 'text-purple-600 font-bold' : textColor
+                          (link.id === 'shop' && location.pathname.startsWith(`/${language}/shop`)) ||
+                          location.pathname === link.path
+                            ? 'text-purple-600 font-bold' : textColor
                         }`}
                       >
-                        <ShoppingBag className="w-3.5 h-3.5" />
+                        {link.id === 'shop' && <ShoppingBag className="w-3.5 h-3.5" />}
                         <span>{link.label}</span>
                       </Link>
                     ) : (
@@ -166,15 +185,40 @@ export default function Navigation() {
                 ))}
               </ul>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
+                {/* Cart with Badge */}
+                <Link
+                  to={`/${language}/cart`}
+                  className={`relative p-2 rounded-full transition-colors hover:text-purple-600 ${textColor}`}
+                  aria-label={language === 'ar' ? 'السلة' : 'Cart'}
+                  title={language === 'ar' ? 'سلة التسوق' : 'Shopping Cart'}
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-0.5 -end-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-purple-600 text-white text-[10px] font-black flex items-center justify-center shadow-sm">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Account Link */}
+                <Link
+                  to={`/${language}/account`}
+                  className={`p-2 rounded-full transition-colors hover:text-purple-600 ${textColor}`}
+                  aria-label={language === 'ar' ? 'حسابي' : 'Account'}
+                  title={language === 'ar' ? 'حسابي وطلباتي' : 'My Account'}
+                >
+                  <User className="w-4 h-4" />
+                </Link>
+
                 {/* Language toggle */}
                 <button
                   onClick={toggleLanguage}
-                  className={`flex items-center gap-2 text-sm font-medium ${textColor} hover:text-purple-600 transition-colors`}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 ${textColor} hover:text-purple-600 transition-colors`}
                   aria-label={t.nav.switchLanguage || 'Toggle language'}
                 >
-                  <Globe className="w-4 h-4" />
-                  <span>{language === 'ar' ? 'English' : 'العربية'}</span>
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>{language === 'ar' ? 'EN' : 'عربي'}</span>
                 </button>
 
                 {/* Theme toggle */}
@@ -193,7 +237,7 @@ export default function Navigation() {
                 
                 <Link 
                   to={`/${language}/shop`}
-                  className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm shadow-purple-600/20"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm shadow-purple-600/20"
                 >
                   {t.shop.title}
                 </Link>
@@ -201,7 +245,26 @@ export default function Navigation() {
             </nav>
 
             {/* Mobile Header Controls */}
-            <div className="flex items-center gap-2 md:hidden">
+            <div className="flex items-center gap-1.5 md:hidden">
+              <Link
+                to={`/${language}/cart`}
+                className={`relative p-2 ${textColor} hover:text-purple-600`}
+                aria-label={language === 'ar' ? 'السلة' : 'Cart'}
+              >
+                <ShoppingBag className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute top-1 end-1 min-w-[16px] h-[16px] px-0.5 rounded-full bg-purple-600 text-white text-[9px] font-black flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+              <Link
+                to={`/${language}/account`}
+                className={`p-2 ${textColor} hover:text-purple-600`}
+                aria-label={language === 'ar' ? 'حسابي' : 'Account'}
+              >
+                <User className="w-5 h-5" />
+              </Link>
               <button
                 onClick={toggleTheme}
                 className={`p-2 rounded-full transition-all duration-300 ${
@@ -211,14 +274,14 @@ export default function Navigation() {
                 }`}
                 aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
               >
-                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
               <button
                 onClick={toggleLanguage}
                 className={`p-2 ${textColor} hover:text-purple-600`}
                 aria-label={t.nav.switchLanguage || 'Toggle language'}
               >
-                <Globe className="w-5 h-5" />
+                <Globe className="w-4 h-4" />
               </button>
               <button
                 ref={menuButtonRef}
@@ -227,7 +290,7 @@ export default function Navigation() {
                 aria-expanded={isOpen}
                 aria-label={t.nav.toggleMenu || 'Open Menu'}
               >
-                <Menu className="w-6 h-6" />
+                <Menu className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -265,7 +328,7 @@ export default function Navigation() {
                         className={`text-xl font-bold ${textColor} hover:text-purple-600 flex items-center justify-between`}
                       >
                         <span>{link.label}</span>
-                        <ShoppingBag className="w-5 h-5 text-purple-600" />
+                        {link.id === 'shop' && <ShoppingBag className="w-5 h-5 text-purple-600" />}
                       </Link>
                     ) : (
                       <a
