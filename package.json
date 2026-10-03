@@ -14,7 +14,7 @@
   },
   "scripts": {
     "validate-data": "tsx scripts/validate-data.ts",
-    "prebuild": "npm run db:generate -w @aljeel/server && npm run build -w @aljeel/shared",
+    "prebuild": "npm run db:generate -w @aljeel/server && npm run build -w @aljeel/shared && tsx scripts/generate-static-api.ts",
     "build:client": "tsx scripts/validate-data.ts && tsc && vite build",
     "build": "npm run build:client && npm run build -w @aljeel/server && npm run build -w @aljeel/admin",
     "build:all": "npm run build",
