@@ -1,3 +1,4 @@
+import { useCatalog } from '@/data/CatalogContext';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
@@ -5,11 +6,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useMotionMode } from '@/hooks/useMotionMode';
 import { home } from '@/data/home';
-import bundles from '@/data/bundles.json';
-import productsData from '@/data/products.json';
 import type { Product } from '@/data/types';
 import ProductImage from '@/components/shop/ProductImage';
 export default function SetupRail() {
+  const { bundles: bundles, products: productsData } = useCatalog();
   const root = useRef<HTMLElement>(null), track = useRef<HTMLDivElement>(null);
   const { language, t } = useLanguage(), lite = useMotionMode();
   useEffect(() => {

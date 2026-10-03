@@ -18,5 +18,5 @@ export default function ProgressBar() {
     window.addEventListener('resize', update)
     return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', update); window.removeEventListener('resize', update) }
   }, [])
-  return <div ref={ref} aria-hidden="true" className="fixed top-0 start-0 end-0 h-[3px] bg-gradient-to-r from-purple-600 to-purple-500 z-[60]" style={{ transform: 'scaleX(0)', transformOrigin: dir === 'rtl' ? 'right' : 'left' }} />
+  return <div ref={ref} aria-hidden="true" className="site-reading-progress fixed top-0 start-0 end-0 h-[3px] bg-gradient-to-r from-purple-600 to-purple-500 z-[60]" style={{ transform: 'scaleX(0)', transformOrigin: dir === 'rtl' ? 'right' : 'left' }} />
 }

@@ -1,7 +1,6 @@
+import { useCatalog } from '@/data/CatalogContext';
 import { useState } from 'react';
 import { useLanguage } from '@/i18n/LanguageContext';
-import bundles from '@/data/bundles.json';
-import site from '@/data/site.json';
 import {
   MessageSquare,
   Copy,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 
 export default function BriefBuilder() {
+  const { bundles: bundles, site: site } = useCatalog();
   const { language } = useLanguage();
   const ar = language === 'ar';
   const Arrow = ar ? ArrowUpLeft : ArrowUpRight;

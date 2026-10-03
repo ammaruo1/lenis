@@ -5,6 +5,9 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import fastifyStatic from '@fastify/static';
+import {fileURLToPath} from 'node:url';
+import {existsSync} from 'node:fs';
 import { validatorCompiler, serializerCompiler, jsonSchemaTransform } from '@fastify/type-provider-zod';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
@@ -14,7 +17,10 @@ import { ApiError } from './errors.js';
 import { hashToken, safeEqual } from './security.js';
 import { authRoutes } from './routes-auth.js';
 import { staffRoutes } from './routes-staff.js';
+import {contentRoutes,publicContentRoutes} from './routes-content.js';
 import './auth-context.js';
+import {commerceRoutes} from './routes-commerce.js';
+import {commerceAdminRoutes} from './routes-commerce-admin.js';
 
 export async function buildApp(config: AppConfig, db: PrismaClient, options: { disableRateLimits?: boolean } = {}) {
   const app = Fastify({ bodyLimit: 32 * 1024, trustProxy: config.TRUST_PROXY, logger: config.LOG_LEVEL === 'silent' ? false : {
@@ -25,7 +31,7 @@ export async function buildApp(config: AppConfig, db: PrismaClient, options: { d
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   await app.register(cookie, { secret: config.SESSION_SECRET });
-  await app.register(helmet, { global: true, hsts: config.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false, contentSecurityPolicy: { directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } } });
+  await app.register(helmet, { global: true, hsts: config.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false, contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], imgSrc:["'self'",'data:'],styleSrc:["'self'","'unsafe-inline'"],fontSrc:["'self'"],scriptSrc:["'self'"],connectSrc:["'self'"],frameAncestors: ["'none'"], ...(config.NODE_ENV!=='production'?{upgradeInsecureRequests:null}: {}) } } });
   await app.register(cors, { credentials: true, origin: (origin, callback) => callback(null, !origin || config.ALLOWED_ORIGINS.includes(origin)), methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'X-CSRF-Token'] });
   await app.register(rateLimit, { global: !options.disableRateLimits, max: 120, timeWindow: '1 minute', errorResponseBuilder: () => ({ statusCode: 429, error: { code: 'rate_limited' } }) });
   if (config.NODE_ENV === 'development') {
@@ -36,16 +42,18 @@ export async function buildApp(config: AppConfig, db: PrismaClient, options: { d
     if (error instanceof ApiError) return reply.code(error.statusCode).send({ error: { code: error.code } });
     if (error instanceof z.ZodError || error.validation) return reply.code(400).send({ error: { code: 'validation_failed' } });
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return reply.code(409).send({ error: { code: 'already_exists' } });
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') return reply.code(409).send({ error: { code: 'in_use' } });
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') return reply.code(404).send({ error: { code: 'not_found' } });
     if (error.statusCode && error.statusCode < 500) return reply.code(error.statusCode).send({ error: { code: error.statusCode === 429 ? 'rate_limited' : 'request_failed' } });
     request.log.error({ name: error.name, requestId: request.id }, 'Request failed');
     return reply.code(500).send({ error: { code: 'server_error' } });
   });
-  app.setNotFoundHandler((_request, reply) => reply.code(404).send({ error: { code: 'not_found' } }));
   app.get('/api/health', { schema: { querystring: EmptySchema } }, async (_request, reply) => {
     try { await db.$queryRaw`SELECT 1`; return { status: 'ok' }; }
     catch { return reply.code(503).send({ status: 'unavailable' }); }
   });
+  await publicContentRoutes(app,db);
+  await commerceRoutes(app,db,config);
   await app.register(async admin => {
     admin.addHook('onRequest', async (request, reply) => {
       reply.header('Cache-Control', 'no-store').header('X-Robots-Tag', 'noindex, nofollow');
@@ -75,7 +83,25 @@ export async function buildApp(config: AppConfig, db: PrismaClient, options: { d
     });
     await authRoutes(admin, db, config, options.disableRateLimits ?? false);
     await staffRoutes(admin, db, config);
-    admin.get('/dashboard', { schema: { querystring: EmptySchema } }, async () => ({ phase: 'A', message: 'dashboard_pending', hasBusinessData: false }));
+    await contentRoutes(admin,db,config);
+    await commerceAdminRoutes(admin,db,config);
+    admin.get('/dashboard', { schema: { querystring: EmptySchema } }, async request => ({phase:'launch',hasBusinessData:true,...(can(request.auth!.user.role,'catalog.edit')?{products:await db.product.count(),published:await db.product.count({where:{status:'published'}})}:{})}));
   }, { prefix: '/api/admin' });
+  let spaRoots:{root:string;adminRoot:string}|undefined;
+  if(config.NODE_ENV==='production'||config.SERVE_STATIC){
+    const root=fileURLToPath(new URL('../../dist/',import.meta.url)),adminRoot=fileURLToPath(new URL('../../admin/dist/',import.meta.url));
+    if(existsSync(root)&&existsSync(adminRoot)){
+      await app.register(fastifyStatic,{root,prefix:'/',decorateReply:true});
+      await app.register(fastifyStatic,{root:adminRoot,prefix:'/admin/',decorateReply:false});
+      app.get('/admin',async(_req,reply)=>reply.redirect('/admin/'));
+      app.addHook('onSend',async(request,reply,payload)=>{if(request.url.startsWith('/admin'))reply.header('X-Robots-Tag','noindex, nofollow').header('Cache-Control','no-store');return payload;});
+      spaRoots={root,adminRoot};
+    }
+  }
+  app.setNotFoundHandler((request,reply)=>{
+    const path=request.url.split('?')[0];
+    if(spaRoots&&['GET','HEAD'].includes(request.method)&&!path.startsWith('/api')&&!path.split('/').pop()?.includes('.'))return reply.type('text/html').sendFile('index.html',path.startsWith('/admin/')?spaRoots.adminRoot:spaRoots.root);
+    return reply.code(404).send({error:{code:'not_found'}});
+  });
   return app;
 }

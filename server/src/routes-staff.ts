@@ -14,7 +14,7 @@ export async function staffRoutes(instance: FastifyInstance, db: PrismaClient, c
   const staff = { permission: 'staff.manage' as const };
   app.get('/users', { config: staff, schema: { querystring: StaffListSchema, response: { 200: z.object({ items: z.array(PublicUserSchema), total: z.number(), page: z.number(), pageSize: z.number() }) } } }, async request => {
     const { search, role, page, pageSize } = request.query;
-    const where = { ...(role ? { role } : {}), ...(search ? { OR: [{ nameSearch: { contains: normalizeSearch(search) } }, { name: { contains: search, mode: 'insensitive' as const } }, { email: { contains: search, mode: 'insensitive' as const } }] } : {}) };
+    const where = { ...(role ? { role } : {}), ...(search ? { OR: [{ nameSearch: { contains: normalizeSearch(search) } }, { name: { contains: search } }, { email: { contains: search } }] } : {}) };
     const [items, total] = await db.$transaction([db.user.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }), db.user.count({ where })]);
     return { items: items.map(publicUser), total, page, pageSize };
   });

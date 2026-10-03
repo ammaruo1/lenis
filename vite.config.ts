@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
-import { staticHome } from './scripts/static-home'
 
 export default defineConfig(({ command }) => {
   // The server workspace's development .env must not ship development React.
@@ -9,7 +8,8 @@ export default defineConfig(({ command }) => {
   return {
   envFile: command !== 'build',
   define: command === 'build' ? { 'process.env.NODE_ENV': JSON.stringify('production') } : {},
-  plugins: [react(), { name: 'static-home-fallback', closeBundle: staticHome }],
+  plugins: [react()],
+  server: {proxy:{'/api':{target:'http://127.0.0.1:3000',changeOrigin:false}}},
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

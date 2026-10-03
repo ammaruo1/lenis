@@ -10,10 +10,27 @@ import {
   SiteDataSchema,
 } from '../src/data/schema.js';
 import { home } from '../src/data/home.js';
+import { referenceHome } from '../src/data/reference-home.js';
+import {commerceCopy,orderLabels,errorLabels} from '../src/data/commerce.js';
 import { z } from 'zod';
 import { LocalizedTextSchema } from '../src/data/schema.js';
 const shape = Object.fromEntries(Object.entries(home).filter(([, v]) => typeof v === 'object' && !Array.isArray(v)).map(([k]) => [k, LocalizedTextSchema]));
 const HomeSchema = z.object({ ...shape, featuredId: z.string(), chapters: z.array(z.object({ title: LocalizedTextSchema, body: LocalizedTextSchema })), specLabels: z.array(LocalizedTextSchema), deviceRoles: z.array(LocalizedTextSchema), steps: z.array(LocalizedTextSchema), metricLabels: z.array(LocalizedTextSchema) });
+const text = z.string().trim().min(1);
+const CommerceCopySchema=z.object(Object.fromEntries(Object.keys(commerceCopy.ar).map(key=>[key,text]))).strict();
+CommerceCopySchema.parse(commerceCopy.ar);CommerceCopySchema.parse(commerceCopy.en);
+z.record(z.string(),LocalizedTextSchema).parse(errorLabels);
+if(Object.keys(orderLabels.ar).join(',')!==Object.keys(orderLabels.en).join(','))throw new Error('Order status translations must match');
+const ReferenceCopySchema = z.object({
+  title: z.array(text).min(1), description: text, helper: text, note: text,
+  accessories: text, caption: text, illustration: text, shortcuts: z.array(text).length(3),
+  integrationTitle: z.array(text).length(2), integrationDescription: text,
+  categoriesDescription: text, businessTitle: z.array(text).length(2),
+  serviceTitle: z.array(text).length(2), contactTitle: z.array(text).length(2),
+  contactDescription: text, catalogLabel: text, catalogTitle: text,
+  catalogDescription: text, catalogEmpty: text, catalogEmptyCta: text,
+  faqTitle: text, faqDescription: text,
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,6 +80,9 @@ console.log('🔍 [VALIDATION] Starting Zod schema validation on src/data files.
 const homeResult = HomeSchema.safeParse(home);
 if (!homeResult.success) { console.error(homeResult.error); hasErrors = true; }
 else console.log('✅ home.ts passed bilingual content schema.');
+const referenceResult = z.object({ ar: ReferenceCopySchema, en: ReferenceCopySchema }).safeParse(referenceHome);
+if (!referenceResult.success) { console.error(referenceResult.error); hasErrors = true; }
+else console.log('✅ reference-home.ts passed bilingual content schema.');
 const sourceFile = path.join(projectRoot, 'public/images/sources.json');
 const imageSources = JSON.parse(fs.readFileSync(sourceFile, 'utf8')).images;
 if (!Array.isArray(imageSources)) { console.error('❌ Image source manifest must contain an images array'); hasErrors = true; }

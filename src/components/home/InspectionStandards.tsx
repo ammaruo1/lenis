@@ -1,6 +1,6 @@
+import { useCatalog } from '@/data/CatalogContext';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/i18n/LanguageContext';
-import warrantyData from '@/data/warranty.json';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function InspectionStandards() {
+  const { warranty: warrantyData } = useCatalog();
   const { language } = useLanguage();
   const ar = language === 'ar';
   const Arrow = ar ? ArrowUpLeft : ArrowUpRight;

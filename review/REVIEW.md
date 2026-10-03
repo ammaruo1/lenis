@@ -65,3 +65,6 @@
 ![الخدمة](after-service.jpg)
 
 ![العلامات والختام](after-trust-contact.jpg)
+
+## 2026-10-03 - Mobile homepage polish
+See [mobile design QA](home-reference/mobile-design-qa.md) for comparisons, corrected findings and verification.

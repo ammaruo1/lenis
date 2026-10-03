@@ -1,3 +1,4 @@
+import { useCatalog } from '@/data/CatalogContext';
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -10,10 +11,10 @@ import {
   Layers,
   MessageCircle,
 } from 'lucide-react';
-import faqData from '@/data/faq.json';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 export const FAQPage: React.FC = () => {
+  const { faq: faqData } = useCatalog();
   const { language, dir, t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');

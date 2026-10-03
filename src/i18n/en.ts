@@ -37,13 +37,13 @@ export const en: Translations = {
   },
   useCases: {
     title: 'Start with what you want to do.',
-    subtitle: 'Pick your use case and see how we set things up',
+    subtitle: 'Choose what you do every day. See what could complete your setup.',
     cases: [
       {
         id: 'study',
         label: 'Study & Learn',
-        title: 'A space to help you start.',
-        description: 'A suitable laptop, storage, charging and accessories. Chosen based on your field and programs.',
+        title: 'Start with a study-ready setup.',
+        description: 'From lectures to projects, choose a device for your field and software, with accessories for carrying, storage and charging.',
         items: ['Suitable laptop', 'Carrying accessories', 'Storage & charging'],
         cta: 'Help me choose a study setup'
       },
@@ -51,7 +51,7 @@ export const en: Translations = {
         id: 'work',
         label: 'Work & Produce',
         title: 'Details that serve your day.',
-        description: 'Laptop, monitor, hub and stand. Port compatibility and workspace needs.',
+        description: 'More screen space, enough ports and a tidy desk. We check your connections and workflow before choosing accessories.',
         items: ['Laptop & monitor', 'Hub & stand', 'Desk organization'],
         cta: 'Discuss my office setup'
       },
@@ -59,7 +59,7 @@ export const en: Translations = {
         id: 'content',
         label: 'Create Content',
         title: 'Set up your audio and visuals.',
-        description: 'Microphone, lighting, headphones and arm. Device connectivity and recording workflow.',
+        description: 'Start with clear audio and suitable lighting. Match your microphone, headphones and accessories to your device and recording workflow.',
         items: ['Microphone & arm', 'Professional lighting', 'Studio headphones'],
         cta: 'Request a content creation setup'
       },
@@ -67,7 +67,7 @@ export const en: Translations = {
         id: 'gaming',
         label: 'Play & Enjoy',
         title: 'Set up your experience.',
-        description: 'Gaming device, monitor, headset and peripherals. Balanced components for your use and budget.',
+        description: 'Tell us your games and budget. Balance the device, display, headset and peripherals around the experience you want.',
         items: ['Gaming device', 'Monitor & headset', 'Balanced peripherals'],
         cta: 'Discuss a gaming setup'
       }
@@ -236,4 +236,3 @@ export const en: Translations = {
     inspectionNotes: 'Technician Inspection Notes'
   }
 };
-

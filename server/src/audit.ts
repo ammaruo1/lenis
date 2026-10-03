@@ -6,6 +6,7 @@ const secretKeys = /password|secret|token|cookie|authorization|code|recovery/i;
 function scrub(value: unknown): Prisma.InputJsonValue {
   if (value === null || value === undefined) return null as unknown as Prisma.InputJsonValue;
   if (value instanceof Date) return value.toISOString();
+  if (Prisma.Decimal.isDecimal(value)) return value.toString();
   if (typeof value === 'bigint') return value.toString();
   if (Array.isArray(value)) return value.map(scrub);
   if (typeof value === 'object') return Object.fromEntries(Object.entries(value).filter(([key]) => !secretKeys.test(key)).map(([key, item]) => [key, scrub(item)]));

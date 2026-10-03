@@ -1,8 +1,9 @@
+import { useCatalog } from '@/data/CatalogContext';
 import { useLanguage } from '@/i18n/LanguageContext';
-import brands from '@/data/brands.json';
 import { Award } from 'lucide-react';
 
 export default function BrandEcosystem() {
+  const { brands: brands } = useCatalog();
   const { language } = useLanguage();
   const ar = language === 'ar';
 

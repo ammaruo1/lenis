@@ -1,0 +1,28 @@
+export const referenceHome = {
+ ar: {
+   title:['تقنيتك،','تعمل معًا.'], description:'جهاز يناسب يومك. وتجهيز يكمل طموحك.',
+   helper:'للدراسة، للعمل، أو للعب؛ نرتّب معك الاختيار حسب استخدامك وميزانيتك.',
+   note:'على مقاس احتياجك.', accessories:'تفاصيل تصنع الفرق', caption:'جهازك بداية. والتوافق يكمل التجربة.', illustration:'صور توضيحية',
+   shortcuts:['اختر تجهيزك','تصفح الفئات','رتّب احتياجك'],
+   integrationTitle:['اختيار واضح.','تجهيز متكامل.'], integrationDescription:'الجهاز المناسب هو البداية. نراجع المنافذ والملحقات ليعمل كل جزء مع الآخر.',
+   categoriesDescription:'ابدأ بالفئة التي تحتاجها، ثم قارن المواصفات والحالة والتوفر.',
+   businessTitle:['مكتبك اليوم.','فريقك غدًا.'], serviceTitle:['قبل الشراء.','وبعد التسليم.'],
+   contactTitle:['أخبرنا باحتياجك.','نبدأ من هنا.'], contactDescription:'اكتب استخدامك وميزانيتك وما تملكه حاليًا. جهّز ملخصًا يساعدنا على اقتراح خيارات مناسبة.',
+   catalogLabel:'من كتالوج المتجر', catalogTitle:'اختيارك يبدأ بالمواصفات.', catalogDescription:'تصفح الأجهزة المنشورة، وقارن مواصفاتها وحالتها. السعر والضمان موضحان لكل جهاز عند توفرهما.',
+   catalogEmpty:'نجهّز قائمة الأجهزة المتاحة. يمكنك الآن تحديد احتياجك لنساعدك على الاختيار.',
+   catalogEmptyCta:'حدّد ما تحتاجه', faqTitle:'قبل أن تختار.', faqDescription:'إجابات عن حالة الأجهزة، والفحص، والضمان، والتوصيل.',
+ },
+ en: {
+   title:['Your tech.','In sync.'], description:'A device for your day. A setup for your goals.',
+   helper:'Study, work or play. Start with what you need and the budget you have.',
+   note:'Made for your needs.', accessories:'Details that matter', caption:'Start with a device. Complete the connection.', illustration:'Illustrative images',
+   shortcuts:['Choose a setup','Browse categories','Build your brief'],
+   integrationTitle:['Choose with clarity.','Bring it together.'], integrationDescription:'The right device is a start. We check ports and accessories so every part works together.',
+   categoriesDescription:'Start with a category, then compare specifications, condition and availability.',
+   businessTitle:['Your desk today.','Your team tomorrow.'], serviceTitle:['Before you buy.','After you unpack.'],
+   contactTitle:['Tell us what you need.','Let’s start there.'], contactDescription:'Share your use, budget and current equipment. Build a brief to help us suggest suitable options.',
+   catalogLabel:'From our catalog', catalogTitle:'Start with the details.', catalogDescription:'Browse published devices and compare specifications and condition. Check each device for available price and warranty details.',
+   catalogEmpty:'Our available-device list is being prepared. Build a brief and we can help you choose.',
+   catalogEmptyCta:'Tell us what you need', faqTitle:'Before you choose.', faqDescription:'Answers about device condition, testing, warranty and delivery.',
+ },
+};

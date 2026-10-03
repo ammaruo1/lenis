@@ -6,7 +6,12 @@ import ProgressBar from '@/components/layout/ProgressBar'
 import Footer from '@/components/layout/Footer'
 import ScrollToTop from '@/components/layout/ScrollToTop'
 import HomePage from '@/pages/HomePage'
+import {CatalogProvider} from '@/data/CatalogContext'
 const ShopPage = lazy(() => import('@/pages/ShopPage'))
+const CartPage = lazy(() => import('@/pages/CartPage'))
+const CustomerPage = lazy(() => import('@/pages/CustomerPage'))
+const OrderPage = lazy(() => import('@/pages/OrderPage'))
+const PackagesPage = lazy(() => import('@/pages/PackagesPage'))
 const ProductDetailPage = lazy(() => import('@/pages/ProductDetailPage'))
 const WarrantyPage = lazy(() => import('@/pages/WarrantyPage'))
 const FAQPage = lazy(() => import('@/pages/FAQPage'))
@@ -17,7 +22,7 @@ export default function App() {
   useLenis()
 
   return (
-    <div className="relative min-h-screen">
+    <CatalogProvider><div className="relative min-h-screen">
       <ScrollToTop />
       <ProgressBar />
       <Navigation />
@@ -30,6 +35,10 @@ export default function App() {
         <Route path="/:lang/shop" element={<ShopPage />} />
         <Route path="/:lang/shop/:category" element={<ShopPage />} />
         <Route path="/:lang/shop/:category/:slug" element={<ProductDetailPage />} />
+        <Route path="/:lang/cart" element={<CartPage />} />
+        <Route path="/:lang/bundles" element={<PackagesPage />} />
+        <Route path="/:lang/account" element={<CustomerPage />} />
+        <Route path="/:lang/orders/:id" element={<OrderPage />} />
 
         {/* Phase 2 Routes */}
         <Route path="/:lang/warranty" element={<WarrantyPage />} />
@@ -43,6 +52,6 @@ export default function App() {
       </Routes></Suspense>
 
       <Footer />
-    </div>
+    </div></CatalogProvider>
   )
 }

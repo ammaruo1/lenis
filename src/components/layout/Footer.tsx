@@ -1,18 +1,14 @@
+import { useCatalog } from '@/data/CatalogContext';
 import { Link } from 'react-router-dom'
 import * as Dialog from '@radix-ui/react-dialog'
 import { X, Globe } from 'lucide-react'
 import { useLanguage } from '@/i18n/LanguageContext'
-import siteData from '@/data/site.json'
 
 export default function Footer() {
+  const { site: siteData, categories: managedCategories } = useCatalog();
   const { t, language, toggleLanguage } = useLanguage()
 
-  const categories = [
-    { id: 'laptops', label: t.shop.categories.laptops },
-    { id: 'displays', label: t.shop.categories.displays },
-    { id: 'gaming', label: t.shop.categories.gaming },
-    { id: 'power', label: t.shop.categories.power },
-  ]
+  const categories = managedCategories.map(c=>({id:c.slug,label:c.title[language]}))
 
   return (
     <footer className="bg-[#FAF8FF] dark:bg-[#0B0B0F] text-[#110D20] dark:text-[#F8F7FC] pt-16 pb-8 border-t border-purple-100 dark:border-white/5 transition-colors duration-500">
@@ -20,13 +16,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
           <div className="md:col-span-5 flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <img 
+              <img
                 src="/logo.webp"
-                alt={t.footer.storeName} 
+                alt={siteData.storeName[language]}
                 className="h-10 w-auto object-contain"
               />
               <span className="text-xl font-extrabold text-[#110D20] dark:text-white">
-                {language === 'ar' ? 'الجيل العربي الرقمي' : 'Al-Jeel Al-Arabi'}
+                {siteData.storeName[language]}
               </span>
             </div>
             <p className="text-purple-700 dark:text-purple-300 text-sm font-semibold max-w-sm">
@@ -36,7 +32,7 @@ export default function Footer() {
               {siteData.city[language] || 'صنعاء، اليمن'}
             </p>
           </div>
-          
+
           <nav className="md:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8" aria-label="Footer Navigation">
             <div className="flex flex-col gap-3">
               <h3 className="text-sm font-bold text-[#110D20] dark:text-white uppercase tracking-wider">
@@ -116,7 +112,7 @@ export default function Footer() {
             </div>
           </nav>
         </div>
-        
+
         <div className="pt-8 border-t border-purple-100 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-4 font-medium">
             <span>© {new Date().getFullYear()} {language === 'ar' ? 'الجيل العربي الرقمي' : 'Al-Jeel Al-Arabi'}.</span>
@@ -140,7 +136,7 @@ export default function Footer() {
               </Dialog.Portal>
             </Dialog.Root>
           </div>
-          
+
           <button
             onClick={toggleLanguage}
             className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"

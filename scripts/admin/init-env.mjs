@@ -3,8 +3,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const password = randomBytes(32).toString('hex');
 let contents = await readFile(new URL('.env.example', root), 'utf8');
-contents = contents.replace(/^POSTGRES_PASSWORD=$/m, `POSTGRES_PASSWORD=${password}`)
-  .replace(/^DATABASE_URL=$/m, `DATABASE_URL=postgresql://aljeel:${password}@localhost:5432/aljeel`)
+contents = contents.replace(/^MYSQL_PASSWORD=$/m, `MYSQL_PASSWORD=${password}`)
+  .replace(/^MYSQL_ROOT_PASSWORD=$/m, `MYSQL_ROOT_PASSWORD=${randomBytes(32).toString('hex')}`)
+  .replace(/^DATABASE_URL=$/m, `DATABASE_URL=mysql://alarbi:${password}@127.0.0.1:3306/alarbi`)
   .replace(/^SESSION_SECRET=$/m, `SESSION_SECRET=${randomBytes(48).toString('hex')}`)
   .replace(/^TOTP_ENCRYPTION_KEY=$/m, `TOTP_ENCRYPTION_KEY=${randomBytes(32).toString('hex')}`);
 try {

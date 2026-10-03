@@ -1,45 +1,19 @@
-name: aljeel-admin-dev
+name: alarbi-mysql-dev
 services:
-  postgres:
-    image: postgres:16-alpine
+  mysql:
+    image: mysql:8.4
+    command: ["--default-time-zone=+00:00"]
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-aljeel}
-      POSTGRES_DB: ${POSTGRES_DB:-aljeel}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run npm run env:init first}
-    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
-    volumes: ["postgres_data:/var/lib/postgresql/data"]
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-alarbi}
+      MYSQL_USER: ${MYSQL_USER:-alarbi}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Run npm run env:init}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Run npm run env:init}
+    ports: ["127.0.0.1:${MYSQL_PORT:-3306}:3306"]
+    volumes: ["mysql_data:/var/lib/mysql"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root --password=\"$$MYSQL_ROOT_PASSWORD\""]
       interval: 5s
       timeout: 5s
       retries: 20
-  api:
-    build:
-      context: .
-      dockerfile: server/Dockerfile.dev
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-aljeel}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-aljeel}
-    ports: ["127.0.0.1:3001:3001"]
-    depends_on:
-      postgres: { condition: service_healthy }
-    volumes:
-      - ./server/src:/app/server/src
-      - ./packages/shared/src:/app/packages/shared/src
-      - uploads:/app/uploads
-    command: ["sh", "-c", "npm run db:migrate && npm run dev:server"]
-  admin:
-    build:
-      context: .
-      dockerfile: server/Dockerfile.dev
-    ports: ["127.0.0.1:5174:5174"]
-    volumes:
-      - ./admin/src:/app/admin/src
-      - ./packages/shared/src:/app/packages/shared/src
-    environment:
-      ADMIN_API_PROXY: http://api:3001
-    depends_on: [api]
-    command: ["npm", "run", "dev:admin"]
 volumes:
-  postgres_data:
-  uploads:
+  mysql_data:

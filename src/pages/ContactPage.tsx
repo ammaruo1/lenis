@@ -1,3 +1,4 @@
+import { useCatalog } from '@/data/CatalogContext';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -12,10 +13,10 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
-import siteData from '@/data/site.json';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 export const ContactPage: React.FC = () => {
+  const { site: siteData } = useCatalog();
   const { language, dir, t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',

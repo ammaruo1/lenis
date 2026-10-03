@@ -1,4 +1,6 @@
-import ProductDisplay from '@/components/ui/ProductDisplay'
+import ProductDisplay from '@/components/sections/ReferenceDisplay'
+import MotionHeading from '@/components/home/MotionHeading'
+import { isLite } from '@/hooks/useMotionMode'
 import { useRef, useState } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
 import gsap from 'gsap'
@@ -16,15 +18,16 @@ export default function UseCases(){
   useGSAP(()=>{
     const mm=gsap.matchMedia()
     mm.add('(prefers-reduced-motion: no-preference)',()=>{
-      gsap.from('.setup-panel .setup-copy > *',{x:ar?25:-25,opacity:0,duration:.6,stagger:.07,clearProps:'all'})
-      gsap.from('.setup-panel .product-display, .setup-panel .setup-image > img',{scale:1.08,opacity:0,duration:.85,ease:'power2.out',clearProps:'all'})
+      if (isLite()) return
+      gsap.from('.setup-panel .setup-copy > *',{y:16,opacity:0,duration:.45,stagger:.045,clearProps:'all',scrollTrigger:{trigger:'.setup-copy',start:'top 94%',once:true}})
+      gsap.from('.setup-panel .product-display, .setup-panel .setup-image > img',{scale:1.035,opacity:0,duration:.6,ease:'power2.out',clearProps:'all',scrollTrigger:{trigger:'.setup-image',start:'top 94%',once:true}})
     })
     return ()=>mm.revert()
   },{scope:ref,dependencies:[active,dir],revertOnUpdate:true})
   return <section id="setups" ref={ref} className="setups-section section-space"><div className="page-shell">
-    <div className="section-heading"><div><div className="eyebrow"><span className="section-index">02</span>{ar?'تقنية على مقاس يومك':'MADE FOR YOUR EVERYDAY'}</div><h2>{t.useCases.title}</h2></div><p>{t.useCases.subtitle}</p></div>
+    <div className="section-heading"><div><div className="eyebrow"><span className="section-index">02</span>{ar?'تقنية على مقاس يومك':'MADE FOR YOUR EVERYDAY'}</div><MotionHeading lines={[t.useCases.title]}/></div><p>{t.useCases.subtitle}</p></div>
     <Tabs.Root dir={dir} value={active} onValueChange={setActive}><Tabs.List className="setup-tabs" aria-label={ar?'اختر استخدامك':'Choose your use case'}>{t.useCases.cases.map((c,i)=>{const Icon=icons[i];return <Tabs.Trigger key={c.id} value={c.id}><Icon size={20}/>{c.label}<span>0{i+1}</span></Tabs.Trigger>})}</Tabs.List>
-    {t.useCases.cases.map((c,i)=><Tabs.Content key={c.id} value={c.id} className={`setup-panel setup-${c.id}`}><div className="setup-image">{c.id==='work'?<ProductDisplay label={c.title}/>:<img src={`/images/${images[c.id]}.webp`} alt={c.title} width="1200" height="800" loading="lazy"/>}<div className="setup-image-caption"><span dir="ltr">SETUP / 0{i+1}</span><span>{c.label}</span></div></div><div className="setup-copy"><span className="micro-label">{ar?'مساحتك. بطريقتك.':'YOUR SPACE. YOUR WAY.'}</span><h3>{c.title}</h3><p>{c.description}</p><ul>{c.items.map(item=><li key={item}><Check size={18}/>{item}</li>)}</ul><a className="action-primary" href="#contact" onClick={()=>window.dispatchEvent(new CustomEvent('setup-interest',{detail:c.id}))}>{c.cta}<Arrow size={20}/></a><span className="setup-footnote">{ar?'نوازن بين احتياجك، التوافق، والميزانية.':'Balanced around your needs, compatibility and budget.'}</span></div></Tabs.Content>)}
+    {t.useCases.cases.map((c,i)=><Tabs.Content key={c.id} value={c.id} className={`setup-panel setup-${c.id}`}><div className="setup-image">{c.id==='work'?<ProductDisplay label={c.title}/>:<img src={`/images/home-reference/${images[c.id]}.webp`} alt={c.title} width="1200" height="800" loading="lazy"/>}<div className="setup-image-caption"><span dir="ltr">SETUP / 0{i+1}</span><span>{c.label}</span></div></div><div className="setup-copy"><span className="micro-label">{ar?'مساحتك. بطريقتك.':'YOUR SPACE. YOUR WAY.'}</span><h3>{c.title}</h3><p>{c.description}</p><ul>{c.items.map(item=><li key={item}><Check size={18}/>{item}</li>)}</ul><a className="action-primary" href="#contact" onClick={()=>window.dispatchEvent(new CustomEvent('setup-interest',{detail:c.id}))}>{c.cta}<Arrow size={20}/></a><span className="setup-footnote">{ar?'نوازن بين احتياجك، التوافق، والميزانية.':'Balanced around your needs, compatibility and budget.'}</span></div></Tabs.Content>)}
     </Tabs.Root>
   </div></section>
 }

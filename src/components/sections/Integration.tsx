@@ -1,4 +1,7 @@
-import ProductDisplay from '@/components/ui/ProductDisplay'
+import ProductDisplay from '@/components/sections/ReferenceDisplay'
+import MotionHeading from '@/components/home/MotionHeading'
+import { referenceHome } from '@/data/reference-home'
+import { isLite } from '@/hooks/useMotionMode'
 import { useRef, useState } from 'react'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
@@ -22,18 +25,25 @@ export default function Integration() {
         .to('.ecosystem-halo', {scale: 1.2, opacity: .8, duration: 1}, 1.5)
     })
     mm.add('(max-width: 899px) and (prefers-reduced-motion: no-preference)', () => {
-      gsap.from('.ecosystem-laptop', {y: 40, scale: .92, duration: 1, scrollTrigger:{trigger:'.ecosystem',start:'top 85%',once:true}})
-      gsap.from('.integration-step', {x: ar ? 24 : -24, opacity: 0, stagger: .15, duration: .7, scrollTrigger:{trigger:'.integration-steps',start:'top 85%',once:true}})
+      if (isLite()) return
+      const timeline = gsap.timeline({ scrollTrigger: { trigger: '.ecosystem', start: 'top 88%', once: true } })
+      timeline.from('.ecosystem-laptop', { y: 24, scale: .95, opacity: 0, duration: .65 })
+        .from('.ecosystem-audio', { x: 16, y: 12, opacity: 0, duration: .5 }, .16)
+        .from('.ecosystem-desktop', { y: 20, opacity: 0, duration: .5 }, .32)
+      gsap.utils.toArray<HTMLElement>('.integration-step').forEach((step,i)=>{
+        gsap.from(step, {x: ar ? 14 : -14, opacity: 0, duration: .45, scrollTrigger:{trigger:step,start:'top 90%',once:true}})
+        ScrollTrigger.create({trigger:step,start:'top 68%',end:'bottom 40%',onEnter:()=>setActive(i),onEnterBack:()=>setActive(i)})
+      })
     })
     return () => mm.revert()
   }, {scope:ref,dependencies:[dir],revertOnUpdate:true})
   return <section id="integration" ref={ref} className="integration-scene">
     <div className="integration-sticky"><div className="page-shell integration-grid">
-      <div className="integration-copy"><div className="eyebrow"><span className="section-index">01</span>{ar ? 'الصورة الكاملة' : 'THE BIG PICTURE'}</div><h2>{ar ? <>كل جزء له دور.<br/><em>معًا، تصنع الفرق.</em></> : <>Every part matters.<br/><em>Better together.</em></>}</h2><p>{t.integration.subtitle}</p>
+      <div className="integration-copy"><div className="eyebrow"><span className="section-index">01</span>{ar ? 'الصورة الكاملة' : 'THE BIG PICTURE'}</div><MotionHeading lines={referenceHome[language].integrationTitle} accent/><p>{referenceHome[language].integrationDescription}</p>
         <div className="integration-steps">{t.integration.stages.map((s,i)=><div className={`integration-step ${active===i?'is-active':''}`} key={s.title}><span className="step-number">0{i+1}</span><div><h3>{s.title}</h3><p>{s.description}</p></div><Check size={18}/></div>)}</div>
         <a className="action-text" href="#setups">{t.integration.cta}<Arrow size={20}/></a>
       </div>
-      <div className="ecosystem"><div className="ecosystem-halo" aria-hidden="true"/><span className="ecosystem-word" aria-hidden="true" dir="ltr">IN SYNC.</span><img className="ecosystem-laptop" src="/images/laptop.webp" alt={ar?'لابتوب للتجهيز الشخصي':'Laptop for your personal setup'} width="1600" height="766" loading="lazy"/><img className="ecosystem-audio" src="/images/headphones.webp" alt={ar?'سماعات تكمل التجهيز':'Headphones to complete the setup'} width="614" height="680" loading="lazy"/><ProductDisplay className="ecosystem-desktop" label={ar?'شاشة ومحطة عمل متكاملة':'Display and desktop workstation'}/><span className="ecosystem-caption"><span className="status-dot"/>{ar?'اختيار. توافق. تكامل.':'CHOOSE. CONNECT. CREATE.'}</span></div>
+      <div className="ecosystem"><div className="ecosystem-halo" aria-hidden="true"/><span className="ecosystem-word" aria-hidden="true" dir="ltr">IN SYNC.</span><img className="ecosystem-laptop" src="/images/home-reference/laptop.webp" alt={ar?'لابتوب للتجهيز الشخصي':'Laptop for your personal setup'} width="1600" height="766" loading="lazy"/><img className="ecosystem-audio" src="/images/home-reference/headphones.webp" alt={ar?'سماعات تكمل التجهيز':'Headphones to complete the setup'} width="614" height="680" loading="lazy"/><ProductDisplay className="ecosystem-desktop" label={ar?'شاشة ومحطة عمل متكاملة':'Display and desktop workstation'}/><span className="ecosystem-caption"><span className="status-dot"/>{ar?'اختيار. توافق. تكامل.':'CHOOSE. CONNECT. CREATE.'}</span></div>
     </div></div>
   </section>
 }

@@ -1,14 +1,13 @@
-name: aljeel-admin-test
+name: alarbi-mysql-test
 services:
-  postgres:
-    image: postgres:16-alpine
+  mysql:
+    image: mysql:8.4
+    command: ["--default-time-zone=+00:00"]
     environment:
-      POSTGRES_USER: aljeel_test
-      POSTGRES_DB: aljeel_test
-      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:?Set a random TEST_POSTGRES_PASSWORD}
-    ports: ["127.0.0.1:5433:5432"]
-    tmpfs: [/var/lib/postgresql/data]
+      MYSQL_ROOT_PASSWORD: ${TEST_MYSQL_PASSWORD:?Set a random TEST_MYSQL_PASSWORD}
+    ports: ["127.0.0.1:53308:3306"]
+    tmpfs: [/var/lib/mysql]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aljeel_test -d aljeel_test"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root --password=\"$$MYSQL_ROOT_PASSWORD\""]
       interval: 2s
       retries: 20

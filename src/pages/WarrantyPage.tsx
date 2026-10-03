@@ -1,3 +1,4 @@
+import { useCatalog } from '@/data/CatalogContext';
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
@@ -10,10 +11,10 @@ import {
   PackageCheck,
   ChevronRight,
 } from 'lucide-react';
-import warrantyData from '@/data/warranty.json';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 export const WarrantyPage: React.FC = () => {
+  const { warranty: warrantyData } = useCatalog();
   const { subtab } = useParams<{ subtab?: string }>();
   const { language, dir } = useLanguage();
 

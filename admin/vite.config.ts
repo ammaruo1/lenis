@@ -7,6 +7,6 @@ export default defineConfig({
   base: '/admin/', plugins: [react()],
   // Reuse the storefront font assets without copying or changing them.
   publicDir: path.join(root, 'public'),
-  server: { port: 5174, strictPort: true, proxy: { '/api': { target: process.env.ADMIN_API_PROXY ?? 'http://127.0.0.1:3001', changeOrigin: false } } },
-  preview: { proxy: { '/api': { target: 'http://127.0.0.1:3001', changeOrigin: false } } },
+  server: { port: 5174, strictPort: true, proxy: { '/api': { target: process.env.ADMIN_API_PROXY ?? 'http://127.0.0.1:3000', changeOrigin: false } } },
+  preview: { proxy: { '/api': { target: 'http://127.0.0.1:3000', changeOrigin: false } } },
 });

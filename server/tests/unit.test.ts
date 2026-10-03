@@ -3,11 +3,11 @@ import { can, roles, permissions, permissionTable, PasswordSchema, StaffCreateSc
 import { ConfigSchema } from '../src/config.js';
 import { encryptSecret, decryptSecret, hashPassword, verifyPassword, hashToken, randomToken, makeTotp, totpCounter } from '../src/security.js';
 import { readFileSync } from 'node:fs';
-const config = ConfigSchema.parse({ DATABASE_URL: 'postgresql://localhost/unit_test', SESSION_SECRET: randomToken(), TOTP_ENCRYPTION_KEY: 'a'.repeat(64), ALLOWED_ORIGINS: 'http://localhost:5174', LOG_LEVEL: 'silent' });
+const config = ConfigSchema.parse({ DATABASE_URL: 'mysql://localhost/unit_test', SESSION_SECRET: randomToken(), TOTP_ENCRYPTION_KEY: 'a'.repeat(64), ALLOWED_ORIGINS: 'http://localhost:5174', LOG_LEVEL: 'silent' });
 const expected = {
   owner: permissions,
-  manager: ['settings.manage','catalog.edit','catalog.publish','prices.edit','crm.read','crm.edit','customers.erase','subscribers.read','subscribers.export','analytics.read','analytics.limited','audit.read'],
-  sales: ['prices.edit','crm.read','crm.edit','subscribers.read','analytics.limited'],
+  manager: ['settings.manage','catalog.edit','catalog.publish','prices.edit','inventory.manage','orders.manage','customers.manage','crm.read','crm.edit','customers.erase','subscribers.read','subscribers.export','analytics.read','analytics.limited','audit.read'],
+  sales: ['prices.edit','orders.manage','crm.read','crm.edit','subscribers.read','analytics.limited'],
   editor: ['catalog.edit','catalog.publish'],
   viewer: ['crm.read','analytics.read'],
 };

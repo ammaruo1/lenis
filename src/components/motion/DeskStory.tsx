@@ -1,18 +1,23 @@
+import { useCatalog } from '@/data/CatalogContext';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import DeskStage, { type DeskHandle } from './DeskStage';
 import { home } from '@/data/home';
-import productsData from '@/data/products.json';
-import bundles from '@/data/bundles.json';
 import type { Product } from '@/data/types';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useMotionMode } from '@/hooks/useMotionMode';
 import { ArrowDown, ArrowUpLeft, ArrowUpRight } from 'lucide-react';
 gsap.registerPlugin(ScrollTrigger);
 let introComplete = false;
-export default function DeskStory() {
+export default function DeskStory(){
+  const {products}=useCatalog();
+  if(!products.some(p=>p.id===home.featuredId))return null;
+  return <DeskStoryContent/>;
+}
+function DeskStoryContent() {
+  const { products: productsData, bundles: bundles } = useCatalog();
   const root = useRef<HTMLElement>(null), desk = useRef<DeskHandle>(null);
   const { language } = useLanguage(), lite = useMotionMode();
   const all = productsData as Product[], product = all.find(p => p.id === home.featuredId)!;

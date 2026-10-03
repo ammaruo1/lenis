@@ -64,3 +64,9 @@ playwright-report/
 .env.test
 admin/public/
 **/test-results/
+
+.backups/
+.local/
+review/
+
+.env.hostinger

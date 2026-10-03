@@ -103,7 +103,7 @@ export const ConnectionSchema = z.object({
 export const ProductSchema = z.object({
   id: z.string().min(1),
   slug: z.string().min(1),
-  category: CategoryEnum,
+  category: z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/),
   brand: z.string().min(1),
   model: z.string().min(1),
   title: LocalizedTextSchema,
@@ -151,7 +151,7 @@ export const BundlesArraySchema = z.array(BundleSchema);
 export const BrandSchema = z.object({
   id: z.string(),
   name: z.string(),
-  categories: z.array(CategoryEnum),
+  categories: z.array(z.string()),
   description: LocalizedTextSchema,
   tagline: LocalizedTextSchema.optional(),
   claim: z.string().optional(), // 'authorized' not allowed without doc

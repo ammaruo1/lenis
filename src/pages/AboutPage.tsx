@@ -1,3 +1,4 @@
+import { useCatalog } from '@/data/CatalogContext';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -12,10 +13,10 @@ import {
   Users,
   Compass,
 } from 'lucide-react';
-import siteData from '@/data/site.json';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 export const AboutPage: React.FC = () => {
+  const { site: siteData } = useCatalog();
   const { language, dir } = useLanguage();
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
 

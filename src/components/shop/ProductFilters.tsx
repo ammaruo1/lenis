@@ -1,8 +1,8 @@
+import { useCatalog } from '@/data/CatalogContext';
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Filter, X, Check } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
-import brandsData from '@/data/brands.json';
 
 interface ProductFiltersProps {
   availableBrands?: string[];
@@ -13,6 +13,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
   availableBrands,
   totalFilteredCount,
 }) => {
+  const { brands: brandsData,products,specs } = useCatalog();
   const [searchParams, setSearchParams] = useSearchParams();
   const { language, t } = useLanguage();
 
@@ -56,17 +57,14 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
   );
 
   const brandsList = availableBrands || brandsData.map((b) => b.name);
-  const ramOptions = [8, 16, 32];
-  const storageOptions = [
-    { label: '256 GB', value: '256' },
-    { label: '512 GB', value: '512' },
-    { label: '1 TB', value: '1000' },
-  ];
+  const ramOptions = [...new Set(products.map(p=>p.specs.ramGB).filter((n):n is number=>typeof n==='number'))].sort((a,b)=>a-b);
+  const storageOptions = [...new Set(products.map(p=>p.specs.storageGB).filter((n):n is number=>typeof n==='number'))].sort((a,b)=>a-b).map(n=>({label:n+' GB',value:String(n)}));
   const conditionOptions: Array<'new' | 'A' | 'B' | 'C'> = ['new', 'A', 'B', 'C'];
-  const cpuOptions = ['i5', 'i7', 'Ryzen'];
+  const cpuOptions = [...new Set(products.map(p=>p.specs.cpu).filter((v):v is string=>Boolean(v)))];
 
   return (
     <aside aria-label={t.shop.filters} className="w-full lg:w-72 shrink-0 space-y-6">
+      <label className="block text-sm">{language==='ar'?'بحث عن جهاز':'Search devices'}<input className="w-full rounded-lg border p-2 bg-transparent" value={searchParams.get('q')??''} onChange={e=>updateParam('q',e.target.value)}/></label>
       {/* Header and Reset */}
       <div className="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center gap-2 font-bold text-neutral-900 dark:text-neutral-100">
@@ -232,6 +230,11 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
           })}
         </div>
       </div>
+      {specs.filter(s=>!['ramGB','storageGB','cpu'].includes(s.key)).map(s=>{
+        const values=[...new Set(products.flatMap(p=>{const v=p.specs[s.key];return (Array.isArray(v)?v:[v]).filter(v=>typeof v==='string'||typeof v==='number'||typeof v==='boolean').map(String);} ))].sort();
+        if(!values.length)return null;
+        return <label key={s.key} className="block text-sm">{s.title[language]}<select className="w-full rounded-lg border bg-transparent p-2" value={searchParams.get('spec_'+s.key)??''} onChange={e=>updateParam('spec_'+s.key,e.target.value)}><option value="">{language==='ar'?'الكل':'All'}</option>{values.map(v=><option key={v}>{v}</option>)}</select></label>;
+      })}
     </aside>
   );
 };

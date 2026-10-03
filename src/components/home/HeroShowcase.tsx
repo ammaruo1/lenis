@@ -1,8 +1,7 @@
+import { useCatalog } from '@/data/CatalogContext';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/i18n/LanguageContext';
-import productsData from '@/data/products.json';
-import site from '@/data/site.json';
 import type { Product } from '@/data/types';
 import ProductImage from '@/components/shop/ProductImage';
 import {
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 
 export default function HeroShowcase() {
+  const { products: productsData, site: site } = useCatalog();
   const { language } = useLanguage();
   const ar = language === 'ar';
   const Arrow = ar ? ArrowUpLeft : ArrowUpRight;
@@ -50,6 +50,7 @@ export default function HeroShowcase() {
     }
   ];
 
+  if(!currentProduct) return <section id="hero" className="hero-corporate page-shell"><h1>{site.storeName[language]}</h1><p>{site.tagline[language]}</p><p>{ar?'لا توجد أجهزة منشورة حاليًا. تواصل معنا لمعرفة المتاح.':'No devices are currently published. Contact us for availability.'}</p><Link to={`/${language}/contact`}>{ar?'تواصل معنا':'Contact us'}</Link></section>;
   return (
     <section id="hero" className="hero-corporate page-shell">
       <div className="hero-corporate-grid">

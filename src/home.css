@@ -1679,3 +1679,12 @@ html[dir="rtl"] .step-card-number {
   color: var(--muted);
   margin: 0;
 }
+
+/* Homepage matches the selected E:/prog/lenis reference. */
+body:has(.reference-home){--violet:#7236ea;--brand:#7236ea;--ink:#201532;--muted:#70657e;--paper:#faf8ff;--line:#e7e0ef;--surface:#fff;--lavender:#eee6fc}
+html.dark body:has(.reference-home){--violet:#b38aff;--ink:#f6f1ff;--muted:#b0a6c1;--paper:#110c1b;--surface:#1c1429;--line:#342640;--lavender:#251b39}
+html.dark .reference-home .action-primary{background:#7236ea;color:#fff}
+.reference-home .page-shell{width:min(1320px,calc(100% - 112px))}
+@media(max-width:1100px){.reference-home .page-shell{width:calc(100% - 64px)}}
+@media(max-width:899px){.reference-home .page-shell{width:calc(100% - 40px)}}
+@media(max-width:480px){.reference-home .page-shell{width:calc(100% - 32px)}}

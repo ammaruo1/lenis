@@ -1,7 +1,8 @@
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { Client } from 'pg';
+import sharp from 'sharp';
+import mariadb,{type Connection} from 'mariadb';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { roles, can, type Role } from '@aljeel/shared';
@@ -11,11 +12,12 @@ import { createDb } from '../src/db.js';
 import { hashPassword, hashToken, randomToken, makeTotp, encryptSecret } from '../src/security.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-if (!databaseUrl) throw new Error('TEST_DATABASE_URL is required. Use a disposable PostgreSQL database.');
+if (!databaseUrl) throw new Error('TEST_DATABASE_URL is required. Use a local MySQL/MariaDB test server with CREATE DATABASE rights.');
+if(!['127.0.0.1','localhost'].includes(new URL(databaseUrl).hostname))throw new Error('Integration tests require a local test server; production is never used.');
 const namespace = `admin_test_${randomUUID().replaceAll('-', '')}`;
 const config = ConfigSchema.parse({ NODE_ENV: 'test', DATABASE_URL: databaseUrl, SESSION_SECRET: randomToken(), TOTP_ENCRYPTION_KEY: randomToken().padEnd(64, 'a').slice(0,64).split('').map(c => (c.charCodeAt(0) % 16).toString(16)).join(''), ALLOWED_ORIGINS: 'http://localhost:5174', LOG_LEVEL: 'silent' });
 const password = randomToken();
-let app: FastifyInstance; let db: PrismaClient; let pg: Client; let passwordHash: string;
+let app: FastifyInstance; let db: PrismaClient; let sql: Connection; let passwordHash: string;
 type Browser = { cookies: Map<string,string>; csrf: string; token?: string; call: (path: string, method?: string, body?: unknown, headers?: Record<string,string>) => Promise<LightMyRequestResponse> };
 function browser(): Browser {
   const result: Browser = { cookies: new Map(), csrf: '', async call(path, method = 'GET', body, extra = {}) {
@@ -30,16 +32,24 @@ async function user(role: Role, extra: Record<string,unknown> = {}) { return db.
 async function login(role: Role, extra: Record<string,unknown> = {}) { const account = await user(role, extra); const client = browser(); await client.call('/auth/csrf'); const response = await client.call('/auth/login','POST',{ email: account.email, password }); return { account, client, response }; }
 
 beforeAll(async () => {
-  pg = new Client({ connectionString: databaseUrl }); await pg.connect();
-  // Namespace is generated locally, never from user input.
-  await pg.query(`CREATE SCHEMA "${namespace}"`); await pg.query(`SET search_path TO "${namespace}"`);
-  const migration = (await readFile(new URL('../prisma/migrations/202610020001_foundation/migration.sql', import.meta.url),'utf8')).replace('CREATE SCHEMA IF NOT EXISTS "public";', '');
-  await pg.query(migration);
-  const url = new URL(databaseUrl!); url.searchParams.set('schema', namespace);
+  const url = new URL(databaseUrl!);
+  sql=await mariadb.createConnection({host:url.hostname,port:Number(url.port||3306),user:decodeURIComponent(url.username),password:decodeURIComponent(url.password),allowPublicKeyRetrieval:true});
+  await sql.query(`CREATE DATABASE \`${namespace}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);await sql.query(`USE \`${namespace}\``);
+  const migration=await readFile(new URL('../prisma/mysql-migrations/202610030001_mysql/migration.sql',import.meta.url),'utf8');
+  for(const statement of migration.split(';').map(s=>s.trim()).filter(Boolean)){
+    for(let attempt=0;;attempt++)try{await sql.query(statement);break;}catch(e){if((e as {code:string}).code!=='ER_ERROR_ON_RENAME'||attempt>=3)throw e;await new Promise(r=>setTimeout(r,500));}
+  }
+  const checks=await readFile(new URL('../prisma/mysql-migrations/202610030002_checks/migration.sql',import.meta.url),'utf8');
+  for(const statement of checks.split(';').map(s=>s.trim()).filter(Boolean))await sql.query(statement);
+  const commerce=await readFile(new URL('../prisma/mysql-migrations/202610030003_commerce/migration.sql',import.meta.url),'utf8');
+  for(const statement of commerce.split(';').map(s=>s.trim()).filter(Boolean)){for(let attempt=0;;attempt++){try{await sql.query(statement);break;}catch(error){if((error as {code:string}).code!=='ER_ERROR_ON_RENAME'||attempt>=5)throw error;await new Promise(resolve=>setTimeout(resolve,500));}}}
+  for(const folder of ['202610030004_commerce_integrity','202610030005_commerce_checks']){const text=await readFile(new URL('../prisma/mysql-migrations/'+folder+'/migration.sql',import.meta.url),'utf8');for(const statement of text.split(';').map(s=>s.trim()).filter(Boolean)){for(let attempt=0;;attempt++){try{await sql.query(statement);break;}catch(error){if((error as {code:string}).code!=='ER_ERROR_ON_RENAME'||attempt>=5)throw error;await new Promise(resolve=>setTimeout(resolve,500));}}}}
+  for(const operation of ['UPDATE','DELETE'])await sql.query(`CREATE TRIGGER AuditLog_no_${operation.toLowerCase()} BEFORE ${operation} ON AuditLog FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Audit log is append-only'`);
+  url.pathname='/'+namespace;
   db = createDb(url.toString()); passwordHash = await hashPassword(password);
   app = await buildApp(config, db, { disableRateLimits: true }); await app.ready();
 }, 60000);
-afterAll(async () => { if (app) await app.close(); if (db) await db.$disconnect(); if (pg) { await pg.query(`DROP SCHEMA IF EXISTS "${namespace}" CASCADE`); await pg.end(); } });
+afterAll(async () => { if (app) await app.close(); if (db) await db.$disconnect(); if (sql) { await sql.query(`DROP DATABASE IF EXISTS \`${namespace}\``); await sql.end(); } });
 describe('auth, cookies and account protections', () => {
   it('health checks the database', async () => expect((await app.inject('/api/health')).statusCode).toBe(200));
   it('requires authentication', async () => expect((await browser().call('/users')).statusCode).toBe(401));
@@ -83,3 +93,41 @@ describe('TOTP and audit', () => {
   it('writes audit entries without credentials or raw IP addresses', async () => { const rows=await db.auditLog.findMany(); const actions=rows.map(row=>row.action); for(const action of ['auth.login','auth.login_failed','auth.logout','staff.created','staff.updated','staff.deactivated','staff.password_reset','staff.totp_reset','auth.password_changed','auth.totp_enabled']) expect(actions).toContain(action); for(const row of rows) { expect(row.ip).toMatch(/^[a-f0-9]{64}$/); expect(JSON.stringify(row)).not.toContain(password); expect(JSON.stringify(row)).not.toContain('passwordHash'); expect(JSON.stringify(row)).not.toContain('totpSecret'); } });
   it('prevents audit log edits at the database layer', async () => { const row = await db.auditLog.findFirstOrThrow(); await expect(db.auditLog.delete({where:{id:row.id}})).rejects.toThrow(); });
 });
+describe('launch catalog and database-backed images',()=>{
+  it('creates, edits, publishes and archives products; enforces pricing rights, revision, public projection and image lifetime',async()=>{
+    const {client}=await login('owner');
+    for(const key of ['site','faq','warranty','bundles'])await db.siteSetting.create({data:{key,value:JSON.parse(await readFile(new URL('../../src/data/'+key+'.json',import.meta.url),'utf8'))}});
+    expect((await client.call('/categories','POST',{slug:'laptops',title:{ar:'لابتوبات',en:'Laptops'},sort:0})).statusCode).toBe(200);
+    expect((await client.call('/brands','POST',{id:'lenovo',name:'Lenovo',description:{ar:'علامة اختبار',en:'Test brand'},categories:['laptops'],published:true,sort:0})).statusCode).toBe(200);
+    expect((await client.call('/specs','POST',{key:'ramGB',title:{ar:'الرام',en:'RAM'},filterable:true})).statusCode).toBe(200);
+    const buffer=await sharp({create:{width:20,height:20,channels:3,background:'#999999'}}).png().toBuffer();
+    const upload=await client.call('/media','POST',{type:'image/png',data:buffer.toString('base64'),altAr:'صورة اختبار',altEn:'Test image'});
+    expect(upload.statusCode).toBe(201);const image=upload.json();
+    expect((await app.inject(image.path)).statusCode).toBe(404);
+    const invalid=await client.call('/media','POST',{type:'image/png',data:Buffer.from('not an image').toString('base64'),altAr:'اختبار',altEn:'Test'});expect(invalid.statusCode).toBe(400);
+    const original=JSON.parse(await readFile(new URL('../../src/data/products.json',import.meta.url),'utf8'))[0];
+    let product={...original,id:'api-launch-test',slug:'api-launch-test',demo:false,images:[image.path],compatibleWith:[],status:'draft',price:{usd:'123.45',yer:null,updatedAt:null,negotiable:false}};
+    const created=await client.call('/products','POST',product);expect(created.statusCode).toBe(201);product=created.json();
+    expect((await app.inject('/api/catalog')).json().products).toHaveLength(0);
+    expect((await db.product.findUniqueOrThrow({where:{id:product.id}})).priceUsd?.toFixed(2)).toBe('123.45');
+    expect(await db.productFacet.count({where:{productId:product.id,key:'ramGB'}})).toBe(1);
+    const editor=await login('editor');expect((await editor.client.call('/products/'+product.id,'PATCH',{...product,price:{...product.price,usd:'999.99'}})).statusCode).toBe(403);
+    const viewer=await login('viewer');expect((await viewer.client.call('/products')).statusCode).toBe(403);
+    const stale=product;
+    let updated=await client.call('/products/'+product.id,'PATCH',{...product,condition:'B',status:'published'});expect(updated.statusCode).toBe(200);product=updated.json();
+    expect((await client.call('/products/'+product.id,'PATCH',stale)).statusCode).toBe(409);
+    const publicProduct=(await app.inject('/api/catalog')).json().products[0];expect(publicProduct.condition).toBe('B');expect(publicProduct).not.toHaveProperty('status');expect(publicProduct).not.toHaveProperty('revision');expect(publicProduct).not.toHaveProperty('serialNumber');
+    expect((await app.inject(image.path)).statusCode).toBe(200);
+    expect((await client.call('/media/'+image.id,'DELETE')).statusCode).toBe(409);
+    const restarted=await buildApp(config,db,{disableRateLimits:true});try{expect((await restarted.inject(image.path)).statusCode).toBe(200);}finally{await restarted.close();}
+    updated=await client.call('/products/'+product.id,'PATCH',{...product,status:'archived'});expect(updated.statusCode).toBe(200);product=updated.json();expect((await app.inject('/api/catalog')).json().products).toHaveLength(0);expect((await app.inject(image.path)).statusCode).toBe(404);
+    updated=await client.call('/products/'+product.id,'PATCH',{...product,images:[]});expect(updated.statusCode).toBe(200);
+    expect((await client.call('/media/'+image.id,'DELETE')).statusCode).toBe(200);
+    const before=await client.call('/content/site');expect(before.statusCode).toBe(200);const record=before.json();
+    expect((await client.call('/content/site','PATCH',{value:{...record.value,whatsapp:'967777123456'},revision:record.updatedAt})).statusCode).toBe(200);
+    expect((await app.inject('/api/catalog')).json().site.whatsapp).toBe('967777123456');
+    expect((await editor.client.call('/content/site')).statusCode).toBe(403);
+  },60000);
+});
+
+

@@ -1,12 +1,13 @@
+import { useCatalog } from '@/data/CatalogContext';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
-import productsData from '@/data/products.json';
 import { Product } from '@/data/types';
 import { useLanguage } from '@/i18n/LanguageContext';
 import ProductCard from '@/components/shop/ProductCard';
 
 export const LatestProducts: React.FC = () => {
+  const { products: productsData } = useCatalog();
   const { language, dir, t } = useLanguage();
   const allProducts = productsData as unknown as Product[];
   const latestProducts = allProducts.slice(0, 6);

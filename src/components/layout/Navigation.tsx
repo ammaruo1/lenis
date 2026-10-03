@@ -21,6 +21,7 @@ export default function Navigation() {
 
   const navLinks = [
     { id: 'shop', label: t.shop.title, path: `/${language}/shop`, isRoute: true },
+    { id: 'cart', label: language === 'ar' ? 'السلة' : 'Cart', path: `/${language}/cart`, isRoute: true },
     { id: 'warranty', label: language === 'ar' ? 'الضمان والفحص' : 'Warranty', path: `/${language}/warranty`, isRoute: true },
     { id: 'faq', label: language === 'ar' ? 'الأسئلة الشائعة' : 'FAQ', path: `/${language}/faq`, isRoute: true },
     { id: 'about', label: language === 'ar' ? 'من نحن' : 'About', path: `/${language}/about`, isRoute: true },

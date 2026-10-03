@@ -1,9 +1,10 @@
+import { useCatalog } from '@/data/CatalogContext';
 import { Link } from 'react-router-dom';
 import type { Product } from '@/data/types';
-import site from '@/data/site.json';
 import { useLanguage } from '@/i18n/LanguageContext';
 import ProductImage from './ProductImage';
 export default function ProductCard({ product }: { product: Product }) {
+  const { site: site } = useCatalog();
   const { language, t } = useLanguage();
   const path = `/${language}/shop/${product.category}/${product.slug}`;
   const specs = [product.specs.cpu, product.specs.ramGB ? `${product.specs.ramGB} GB RAM` : null, product.specs.storageGB ? `${product.specs.storageGB} GB ${product.specs.storageType}` : null, product.specs.display ? `${product.specs.display.sizeIn}″ · ${product.specs.display.hz} Hz` : null, product.specs.wifiStandard, product.specs.capacityGB ? `${product.specs.capacityGB} GB · ${product.specs.interface}` : null, product.specs.connectionType].filter(Boolean);

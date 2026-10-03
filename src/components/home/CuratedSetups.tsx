@@ -1,8 +1,7 @@
+import { useCatalog } from '@/data/CatalogContext';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/i18n/LanguageContext';
-import bundles from '@/data/bundles.json';
-import productsData from '@/data/products.json';
 import type { Product } from '@/data/types';
 import ProductImage from '@/components/shop/ProductImage';
 import {
@@ -19,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export default function CuratedSetups() {
+  const { bundles: bundles, products: productsData } = useCatalog();
   const { language, t } = useLanguage();
   const ar = language === 'ar';
   const Arrow = ar ? ArrowUpLeft : ArrowUpRight;
@@ -26,8 +26,8 @@ export default function CuratedSetups() {
 
   const [selectedBundleId, setSelectedBundleId] = useState(bundles[1]?.id || bundles[0]?.id);
   const currentBundle = bundles.find(b => b.id === selectedBundleId) || bundles[0];
-  const primaryTier = currentBundle.tiers[0];
-  const bundleProducts = primaryTier.items
+  const primaryTier = currentBundle?.tiers[0];
+  const bundleProducts = (primaryTier?.items??[])
     .map(id => allProducts.find(p => p.id === id))
     .filter((p): p is Product => Boolean(p));
 
@@ -38,6 +38,7 @@ export default function CuratedSetups() {
     gaming: Gamepad2
   };
 
+  if(!currentBundle||!primaryTier)return null;
   return (
     <section id="setups" className="curated-setups-section page-shell">
       {/* Section Header */}

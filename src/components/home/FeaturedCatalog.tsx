@@ -1,20 +1,22 @@
+import { useCatalog } from '@/data/CatalogContext';
+import MotionHeading from './MotionHeading';
+import { referenceHome } from '@/data/reference-home';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/i18n/LanguageContext';
-import productsData from '@/data/products.json';
 import type { Product } from '@/data/types';
 import ProductCard from '@/components/shop/ProductCard';
 import {
-  Laptop,
   ArrowUpLeft,
   ArrowUpRight,
-  Filter,
   PackageCheck
 } from 'lucide-react';
 
 export default function FeaturedCatalog() {
+  const { products: productsData } = useCatalog();
   const { language } = useLanguage();
   const ar = language === 'ar';
+  const copy = referenceHome[language];
   const Arrow = ar ? ArrowUpLeft : ArrowUpRight;
   const products = productsData as Product[];
 
@@ -39,13 +41,11 @@ export default function FeaturedCatalog() {
         <div>
           <div className="eyebrow-chip">
             <PackageCheck size={15} />
-            <span>{ar ? 'أجهزة مفحوصة ومتاحة' : 'Lab-Verified Inventory'}</span>
+            <span>{copy.catalogLabel}</span>
           </div>
-          <h2>{ar ? 'أجهزة مميزة من الكتالوج المعتمد' : 'Featured Devices From Our Catalog'}</h2>
+          <MotionHeading lines={[copy.catalogTitle]}/>
           <p className="catalog-head-sub">
-            {ar
-              ? 'مجموعة مختارة تخضع لجميع الفحوصات وتُسلّم مع تقرير الفحص والضمان.'
-              : 'Handpicked enterprise units tested under load and packaged with full diagnostic records.'}
+            {copy.catalogDescription}
           </p>
         </div>
 
@@ -73,6 +73,7 @@ export default function FeaturedCatalog() {
       </div>
 
       {/* Product Grid */}
+      {!filteredProducts.length&&<div className="catalog-empty-state"><PackageCheck size={26} aria-hidden="true"/><p role="status">{copy.catalogEmpty}</p><a href="#contact" className="action-text">{copy.catalogEmptyCta}<Arrow size={18}/></a></div>}
       <div className="home-product-grid">
         {filteredProducts.map(product => (
           <ProductCard key={product.id} product={product} />
