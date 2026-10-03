@@ -63,9 +63,42 @@ export default function ProductDetailPage() {
           setLoading(false);
         }
       })
-      .catch((err) => {
+      .catch(() => {
         if (active) {
-          setError(errorText(err.message, language));
+          const found = catalogProducts.find(p => p.slug === slug || p.id === slug);
+          if (found) {
+            setItem({
+              product: {
+                id: found.id,
+                slug: found.slug,
+                category: found.category,
+                brand: found.brand,
+                model: found.model,
+                title: found.title,
+                summary: found.summary,
+                images: found.images,
+                demo: found.demo
+              },
+              offers: [{
+                variantId: found.id,
+                sku: found.slug,
+                condition: found.condition,
+                priceUsd: found.price.usd ? String(found.price.usd) : null,
+                priceYer: found.price.yer ? String(found.price.yer) : null,
+                specs: found.specs,
+                images: found.images,
+                available: found.stock === 'in_stock',
+                batteryHealthPct: typeof (found.specs as Record<string, unknown>)?.batteryHealthPct === 'number' ? (found.specs as Record<string, unknown>).batteryHealthPct as number : null,
+                inspection: null,
+                defects: [],
+                warrantyMonths: found.warrantyMonths
+              }],
+              fields: []
+            });
+            setError('');
+          } else {
+            setError(errorText('not_found', language));
+          }
           setLoading(false);
         }
       });
