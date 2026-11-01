@@ -1122,10 +1122,60 @@ html.dark .suggested-chip {
    PRODUCT GRID & CARDS
    ========================================================================== */
 
+.store-catalog-section {
+  position: relative;
+}
+
+.store-catalog-section.is-refreshing .store-grid {
+  opacity: 0.88;
+  transition: opacity 0.15s ease;
+}
+
+.store-refresh-indicator {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  padding: 6px 0;
+  pointer-events: none;
+}
+
+.store-refresh-indicator span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.92);
+  border: 1px solid var(--line, #e7e0ef);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #6b5f7a);
+  box-shadow: 0 2px 8px #20153212;
+}
+
+.store-inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #f0c4c8;
+  background: #fff5f6;
+  color: #8b2e35;
+  font-size: 13px;
+}
+
+.store-inline-error p {
+  margin: 0;
+}
+
 .store-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  position: relative;
 }
 
 .store-card {

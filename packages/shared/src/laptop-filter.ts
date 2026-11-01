@@ -474,13 +474,52 @@ export function computeLaptopFacets(
   items: NormalizedLaptopItem[],
   activeFilters: LaptopFilterParams
 ): LaptopFacets {
-  // 1. Brands
+  // Single pass over items (disjunctive facets) instead of re-filtering the full list per dimension.
   const brandCounts = new Map<string, number>();
-  const itemsForBrands = items.filter(it => laptopMatchesFilters(it, activeFilters, 'brand'));
-  for (const it of itemsForBrands) {
-    brandCounts.set(it.brand, (brandCounts.get(it.brand) ?? 0) + 1);
+  const cpuFamilyCounts = new Map<string, number>();
+  const cpuBrandCounts = new Map<string, number>();
+  const cpuGenCounts = new Map<number, number>();
+  const ramCounts = new Map<number, number>();
+  const storageCounts = new Map<number, number>();
+  const gpuTypeCounts = new Map<'integrated' | 'dedicated', number>();
+  const screenCounts = new Map<number, number>();
+  const touchCounts = new Map<string, number>();
+  const conditionCounts = new Map<string, number>();
+
+  for (const it of items) {
+    if (laptopMatchesFilters(it, activeFilters, 'brand')) {
+      brandCounts.set(it.brand, (brandCounts.get(it.brand) ?? 0) + 1);
+    }
+    if (laptopMatchesFilters(it, activeFilters, 'cpuFamily') && it.specs.cpuFamily) {
+      cpuFamilyCounts.set(it.specs.cpuFamily, (cpuFamilyCounts.get(it.specs.cpuFamily) ?? 0) + 1);
+    }
+    if (laptopMatchesFilters(it, activeFilters, 'cpuBrand') && it.specs.cpuBrand) {
+      cpuBrandCounts.set(it.specs.cpuBrand, (cpuBrandCounts.get(it.specs.cpuBrand) ?? 0) + 1);
+    }
+    if (laptopMatchesFilters(it, activeFilters, 'cpuGen') && typeof it.specs.cpuGen === 'number') {
+      cpuGenCounts.set(it.specs.cpuGen, (cpuGenCounts.get(it.specs.cpuGen) ?? 0) + 1);
+    }
+    if (laptopMatchesFilters(it, activeFilters, 'ramGB') && typeof it.specs.ramGB === 'number') {
+      ramCounts.set(it.specs.ramGB, (ramCounts.get(it.specs.ramGB) ?? 0) + 1);
+    }
+    if (laptopMatchesFilters(it, activeFilters, 'storageGB') && typeof it.specs.storageGB === 'number') {
+      storageCounts.set(it.specs.storageGB, (storageCounts.get(it.specs.storageGB) ?? 0) + 1);
+    }
+    if (laptopMatchesFilters(it, activeFilters, 'gpuType') && it.specs.gpuType) {
+      gpuTypeCounts.set(it.specs.gpuType, (gpuTypeCounts.get(it.specs.gpuType) ?? 0) + 1);
+    }
+    if (laptopMatchesFilters(it, activeFilters, 'screenSize') && typeof it.specs.screenSize === 'number') {
+      screenCounts.set(it.specs.screenSize, (screenCounts.get(it.specs.screenSize) ?? 0) + 1);
+    }
+    if (laptopMatchesFilters(it, activeFilters, 'touch')) {
+      const val = it.specs.touch ? 'true' : 'false';
+      touchCounts.set(val, (touchCounts.get(val) ?? 0) + 1);
+    }
+    if (laptopMatchesFilters(it, activeFilters, 'condition')) {
+      conditionCounts.set(it.condition, (conditionCounts.get(it.condition) ?? 0) + 1);
+    }
   }
-  // Ensure any currently selected brand is present
+
   for (const b of activeFilters.brand ?? []) {
     if (!brandCounts.has(b)) brandCounts.set(b, 0);
   }
@@ -491,14 +530,6 @@ export function computeLaptopFacets(
     title: { ar: b, en: b }
   }));
 
-  // 2. CPU Families
-  const cpuFamilyCounts = new Map<string, number>();
-  const itemsForCpu = items.filter(it => laptopMatchesFilters(it, activeFilters, 'cpuFamily'));
-  for (const it of itemsForCpu) {
-    if (it.specs.cpuFamily) {
-      cpuFamilyCounts.set(it.specs.cpuFamily, (cpuFamilyCounts.get(it.specs.cpuFamily) ?? 0) + 1);
-    }
-  }
   for (const cf of activeFilters.cpuFamily ?? []) {
     if (!cpuFamilyCounts.has(cf)) cpuFamilyCounts.set(cf, 0);
   }
@@ -509,14 +540,6 @@ export function computeLaptopFacets(
     title: { ar: cf, en: cf }
   }));
 
-  // 3. CPU Brands
-  const cpuBrandCounts = new Map<string, number>();
-  const itemsForCpuBrand = items.filter(it => laptopMatchesFilters(it, activeFilters, 'cpuBrand'));
-  for (const it of itemsForCpuBrand) {
-    if (it.specs.cpuBrand) {
-      cpuBrandCounts.set(it.specs.cpuBrand, (cpuBrandCounts.get(it.specs.cpuBrand) ?? 0) + 1);
-    }
-  }
   for (const cb of activeFilters.cpuBrand ?? []) {
     if (!cpuBrandCounts.has(cb)) cpuBrandCounts.set(cb, 0);
   }
@@ -528,32 +551,16 @@ export function computeLaptopFacets(
       title: { ar: val, en: val }
     }));
 
-  // 4. CPU Generations
-  const cpuGenCounts = new Map<number, number>();
-  const itemsForCpuGen = items.filter(it => laptopMatchesFilters(it, activeFilters, 'cpuGen'));
-  for (const it of itemsForCpuGen) {
-    if (typeof it.specs.cpuGen === 'number') {
-      cpuGenCounts.set(it.specs.cpuGen, (cpuGenCounts.get(it.specs.cpuGen) ?? 0) + 1);
-    }
-  }
   for (const cg of activeFilters.cpuGen ?? []) {
     if (!cpuGenCounts.has(cg)) cpuGenCounts.set(cg, 0);
   }
-  const sortedGens = [...cpuGenCounts.keys()].sort((a, b) => b - a); // Newest first
+  const sortedGens = [...cpuGenCounts.keys()].sort((a, b) => b - a);
   const cpuGens: LaptopFacetOption<number>[] = sortedGens.map(gen => ({
     value: gen,
     count: cpuGenCounts.get(gen) ?? 0,
     title: formatCpuGenTitle(gen)
   }));
 
-  // 5. RAM Options
-  const ramCounts = new Map<number, number>();
-  const itemsForRam = items.filter(it => laptopMatchesFilters(it, activeFilters, 'ramGB'));
-  for (const it of itemsForRam) {
-    if (typeof it.specs.ramGB === 'number') {
-      ramCounts.set(it.specs.ramGB, (ramCounts.get(it.specs.ramGB) ?? 0) + 1);
-    }
-  }
   for (const r of activeFilters.ramGB ?? []) {
     if (!ramCounts.has(r)) ramCounts.set(r, 0);
   }
@@ -564,14 +571,6 @@ export function computeLaptopFacets(
     title: formatRamTitle(ram)
   }));
 
-  // 6. Storage Options
-  const storageCounts = new Map<number, number>();
-  const itemsForStorage = items.filter(it => laptopMatchesFilters(it, activeFilters, 'storageGB'));
-  for (const it of itemsForStorage) {
-    if (typeof it.specs.storageGB === 'number') {
-      storageCounts.set(it.specs.storageGB, (storageCounts.get(it.specs.storageGB) ?? 0) + 1);
-    }
-  }
   for (const s of activeFilters.storageGB ?? []) {
     if (!storageCounts.has(s)) storageCounts.set(s, 0);
   }
@@ -582,14 +581,6 @@ export function computeLaptopFacets(
     title: formatStorageTitle(storage)
   }));
 
-  // 7. GPU Types
-  const gpuTypeCounts = new Map<'integrated' | 'dedicated', number>();
-  const itemsForGpu = items.filter(it => laptopMatchesFilters(it, activeFilters, 'gpuType'));
-  for (const it of itemsForGpu) {
-    if (it.specs.gpuType) {
-      gpuTypeCounts.set(it.specs.gpuType, (gpuTypeCounts.get(it.specs.gpuType) ?? 0) + 1);
-    }
-  }
   for (const gt of activeFilters.gpuType ?? []) {
     if (!gpuTypeCounts.has(gt)) gpuTypeCounts.set(gt, 0);
   }
@@ -601,14 +592,6 @@ export function computeLaptopFacets(
       title: formatGpuTypeTitle(t)
     }));
 
-  // 8. Screen Sizes
-  const screenCounts = new Map<number, number>();
-  const itemsForScreens = items.filter(it => laptopMatchesFilters(it, activeFilters, 'screenSize'));
-  for (const it of itemsForScreens) {
-    if (typeof it.specs.screenSize === 'number') {
-      screenCounts.set(it.specs.screenSize, (screenCounts.get(it.specs.screenSize) ?? 0) + 1);
-    }
-  }
   for (const sc of activeFilters.screenSize ?? []) {
     if (!screenCounts.has(sc)) screenCounts.set(sc, 0);
   }
@@ -619,24 +602,11 @@ export function computeLaptopFacets(
     title: formatScreenSizeTitle(size)
   }));
 
-  // 9. Touch Screen
-  const touchCounts = new Map<string, number>();
-  const itemsForTouch = items.filter(it => laptopMatchesFilters(it, activeFilters, 'touch'));
-  for (const it of itemsForTouch) {
-    const val = it.specs.touch ? 'true' : 'false';
-    touchCounts.set(val, (touchCounts.get(val) ?? 0) + 1);
-  }
   const touchOptions: LaptopFacetOption<string>[] = [
     { value: 'true', count: touchCounts.get('true') ?? 0, title: { ar: 'شاشة لمس', en: 'Touch Screen' } },
     { value: 'false', count: touchCounts.get('false') ?? 0, title: { ar: 'شاشة عادية', en: 'Non-Touch' } }
   ].filter(opt => opt.count > 0 || activeFilters.touch === (opt.value === 'true'));
 
-  // 10. Conditions
-  const conditionCounts = new Map<string, number>();
-  const itemsForCondition = items.filter(it => laptopMatchesFilters(it, activeFilters, 'condition'));
-  for (const it of itemsForCondition) {
-    conditionCounts.set(it.condition, (conditionCounts.get(it.condition) ?? 0) + 1);
-  }
   for (const c of activeFilters.condition ?? []) {
     if (!conditionCounts.has(c)) conditionCounts.set(c, 0);
   }

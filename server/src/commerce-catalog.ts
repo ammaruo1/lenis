@@ -474,8 +474,6 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
     for(const val of selected(key))if(!counts.has(val))counts.set(val,new Set());
     return [...counts].map(([value,ids])=>({value,count:ids.size})).sort((a,b)=>a.value.localeCompare(b.value,undefined,{numeric:true}));
   };
-  const specFields=[...new Map(queryMatchedEntries.flatMap(e=>fieldsFor(e.v)).filter(f=>f.filterable&&f.valueType!=='text').map(f=>[f.key,f])).values()].sort((a,b)=>a.sort-b.sort);
-
   const isLaptopCategory=(value:string)=>value==='laptops'||value.startsWith('laptops-');
   const isLaptopProduct=(value:string)=>value==='laptops'||value.startsWith('laptops-');
   const isLaptopsScope=Boolean(category&&isLaptopCategory(category))||(!category&&entries.some(e=>isLaptopProduct(e.v.product.category)&&matchesQuery(e)));
@@ -522,7 +520,15 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
 
   const relatedSearches=query?[...new Set(items.map(item=>String(jsonObject(item.product.title).ar??'').split(/\s+(?:-|–|—)\s+|,\s*/)[0]?.trim()).filter(term=>term&&normalizeSearch(term)!==query))].slice(0,5):[];
   const page=Math.max(1,Number(params.get('page'))||1),pageSize=24,total=items.length;
-  return {items:items.slice((page-1)*pageSize,page*pageSize).map(({searchRank:_searchRank,...item})=>item),total,page,pageSize,hasCatalog:cache.rows.length>0,categories,collections:collections.map(c=>({id:c.id,title:c.title})),relatedSearches,facets:{brand:facet('brand',e=>[e.v.product.brandId]).map(f=>({...f,title:cache.rows.find(r=>r.product.brandId===f.value)?.product.brand.name??f.value})),condition:facet('condition',e=>[e.o.condition]),collection:facet('collection',e=>collections.filter(c=>c.mode==='manual'?c.products.some(p=>p.productId===e.v.productId):ruleMatches(c.rules,e.v,e.o,categories)).map(c=>c.id)),specs:specFields.map(f=>({...f,values:facet('spec_'+f.key,e=>(Array.isArray(e.o.specs[f.key])?e.o.specs[f.key] as unknown[]:[e.o.specs[f.key]]).filter(v=>v!==undefined&&v!==null).map(String))}))},laptopFacets,pricing:pricing?{usdToYer:pricing.usdToYer?.toString()??null,updatedAt:pricing.updatedAt.toISOString()}:null};
+  const emptyFacets={brand:[] as {value:string;count:number;title:string}[],condition:[] as {value:string;count:number}[],collection:[] as {value:string;count:number}[],specs:[] as {key:string;title:unknown;values:{value:string;count:number}[]}[]};
+  const specFields=isLaptopsScope?[]:[...new Map(queryMatchedEntries.flatMap(e=>fieldsFor(e.v)).filter(f=>f.filterable&&f.valueType!=='text').map(f=>[f.key,f])).values()].sort((a,b)=>a.sort-b.sort);
+  const facets=isLaptopsScope?emptyFacets:{
+    brand:facet('brand',e=>[e.v.product.brandId]).map(f=>({...f,title:cache.rows.find(r=>r.product.brandId===f.value)?.product.brand.name??f.value})),
+    condition:facet('condition',e=>[e.o.condition]),
+    collection:facet('collection',e=>collections.filter(c=>c.mode==='manual'?c.products.some(p=>p.productId===e.v.productId):ruleMatches(c.rules,e.v,e.o,categories)).map(c=>c.id)),
+    specs:specFields.map(f=>({...f,values:facet('spec_'+f.key,e=>(Array.isArray(e.o.specs[f.key])?e.o.specs[f.key] as unknown[]:[e.o.specs[f.key]]).filter(v=>v!==undefined&&v!==null).map(String))}))
+  };
+  return {items:items.slice((page-1)*pageSize,page*pageSize).map(({searchRank:_searchRank,...item})=>item),total,page,pageSize,hasCatalog:cache.rows.length>0,categories,collections:collections.map(c=>({id:c.id,title:c.title})),relatedSearches,facets,laptopFacets,pricing:pricing?{usdToYer:pricing.usdToYer?.toString()??null,updatedAt:pricing.updatedAt.toISOString()}:null};
 }
 
 export async function catalogSuggestions(db:PrismaClient,queryInput:string,language:'ar'|'en'='ar'){

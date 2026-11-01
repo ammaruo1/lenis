@@ -40,7 +40,7 @@ export async function buildApp(config: AppConfig, db: PrismaClient, options: { d
   await app.register(cookie, { secret: config.SESSION_SECRET });
   await app.register(helmet, { global: true, hsts: config.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false, contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], imgSrc: ["'self'", 'data:', 'blob:', 'https:'], styleSrc: ["'self'", "'unsafe-inline'"], fontSrc: ["'self'"], scriptSrc: ["'self'"], connectSrc: ["'self'"], frameAncestors: ["'none'"], ...(config.NODE_ENV !== 'production' ? { upgradeInsecureRequests: null } : {}) } } });
   await app.register(cors, { credentials: true, origin: (origin, callback) => callback(null, !origin || config.ALLOWED_ORIGINS.includes(origin)), methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'X-CSRF-Token'] });
-  await app.register(rateLimit, { global: !options.disableRateLimits, max: 120, timeWindow: '1 minute', errorResponseBuilder: () => ({ statusCode: 429, error: { code: 'rate_limited' } }) });
+  await app.register(rateLimit, { global: !options.disableRateLimits, max: 240, timeWindow: '1 minute', errorResponseBuilder: () => ({ statusCode: 429, error: { code: 'rate_limited' } }) });
   if (config.NODE_ENV === 'development') {
     await app.register(swagger, { openapi: { info: { title: 'Al-Jeel Admin API', version: '0.1.0' } }, transform: jsonSchemaTransform });
     await app.register(swaggerUi, { routePrefix: '/api/docs', staticCSP: true });

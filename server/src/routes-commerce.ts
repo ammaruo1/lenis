@@ -12,13 +12,13 @@ import {validateAndCalculateCoupon,recordCouponRedemption} from './coupon-servic
 import {transaction} from './db.js';
 import {audit} from './audit.js';
 export async function commerceRoutes(app:FastifyInstance,db:PrismaClient,config:AppConfig){
-  app.get('/api/shop/catalog',{config:{rateLimit:{max:60,timeWindow:'1 minute'}}},async (request,reply)=>{
+  app.get('/api/shop/catalog',{config:{rateLimit:{max:300,timeWindow:'1 minute'}}},async (request,reply)=>{
     reply.header('Cache-Control','public, max-age=20, stale-while-revalidate=60');
     const params=new URL(request.url,'http://local').searchParams;
     for(const key of ['min','max'])if(params.has(key)&&!/^\d{1,12}(\.\d{1,2})?$/.test(params.get(key)!))throw new ApiError(400,'invalid_price');
     return catalogSearch(db,params);
   });
-  app.get('/api/shop/suggestions',{config:{rateLimit:{max:40,timeWindow:'1 minute'}}},async (request,reply)=>{
+  app.get('/api/shop/suggestions',{config:{rateLimit:{max:120,timeWindow:'1 minute'}}},async (request,reply)=>{
     reply.header('Cache-Control','private, max-age=15, stale-while-revalidate=30');
     const params=new URL(request.url,'http://local').searchParams;
     const query=(params.get('q')??'').slice(0,80);

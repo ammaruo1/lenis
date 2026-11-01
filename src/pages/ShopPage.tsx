@@ -61,7 +61,10 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
 
   const [data, setData] = useState<SearchResult | null>(null);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const dataRef = useRef<SearchResult | null>(null);
+  dataRef.current = data;
   const [open, setOpen] = useState(false);
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
   const [draft, setDraft] = useState(new URLSearchParams(params));
@@ -81,46 +84,56 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
   const catalogAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    trackPageView();
+  }, [language, routeCategory]);
+
+  useEffect(() => {
     // Cancel any previous in-flight request to prevent piling up on the server
     if (catalogAbortRef.current) catalogAbortRef.current.abort();
     const controller = new AbortController();
     catalogAbortRef.current = controller;
 
     let active = true;
-    setLoading(true);
+    const hasCachedResults = Boolean(dataRef.current);
+    if (hasCachedResults) setRefreshing(true);
+    else setInitialLoading(true);
     setError('');
     const q = new URLSearchParams(query);
     if (category) q.set('category', category);
     if (q.has('q') && !q.has('sort')) q.set('sort', 'relevance');
 
-    // Debounce filter changes by 80ms to batch rapid consecutive param changes
+    // Debounce filter changes so rapid clicks send one catalog request, not many aborted ones
     const timer = window.setTimeout(() => {
       fetch('/api/shop/catalog?' + q, { signal: controller.signal })
         .then(async response => {
-          if (!response.ok) throw new Error('catalog');
-          return response.json();
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            const code = typeof body?.error?.code === 'string' ? body.error.code : 'catalog';
+            throw new Error(code);
+          }
+          return body;
         })
         .then(result => {
-          if (active) setData(result as SearchResult);
+          if (active) {
+            setData(result as SearchResult);
+            setError('');
+          }
         })
         .catch(e => {
-          if (e instanceof DOMException && e.name === 'AbortError') return; // request was cancelled, ignore
-          if (active) setError(errorText(e.message, language));
+          if (e instanceof DOMException && e.name === 'AbortError') return;
+          if (active) setError(errorText(e instanceof Error ? e.message : 'catalog', language));
         })
         .finally(() => {
           if (active) {
-            setLoading(false);
-            // Track page view on every category/filter change
-            trackPageView();
-            // Track search queries
+            setInitialLoading(false);
+            setRefreshing(false);
             const searchQuery = q.get('q');
             if (searchQuery) trackSearch(searchQuery);
-            // Track filter usage (any param other than q/page/sort = filter active)
             const hasFilters = [...q.keys()].some(k => !['q', 'page', 'sort', 'category'].includes(k));
             if (hasFilters) trackFilterUsed();
           }
         });
-    }, 80);
+    }, 280);
 
     return () => {
       active = false;
@@ -803,8 +816,17 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
       <div className={`store-layout${showDesktopFilters ? ' has-sidebar-open' : ''}`}>
         {renderFilterContent(params, p => setParams(p))}
 
-        <section className="store-catalog-section" aria-busy={loading}>
-          {error ? (
+        <section className={`store-catalog-section${refreshing ? ' is-refreshing' : ''}`} aria-busy={initialLoading || refreshing}>
+          {error && data ? (
+            <div className="store-inline-error" role="alert">
+              <p>{error}</p>
+              <button type="button" className="store-button secondary" onClick={() => update('retry', String(Date.now()))}>
+                <RotateCcw size={14} />
+                <span>{t.retry}</span>
+              </button>
+            </div>
+          ) : null}
+          {error && !data ? (
             <div className="store-error-box" role="alert">
               <span className="store-state-icon store-state-icon-error" aria-hidden="true"><PackageSearch size={25} /></span>
               <div className="store-state-copy">
@@ -816,7 +838,7 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
                 <span>{t.retry}</span>
               </button>
             </div>
-          ) : loading ? (
+          ) : initialLoading && !data ? (
             <div className="store-loading-box" role="status">
               <div className="store-loading-intro">
                 <span className="store-state-icon"><PackageOpen size={23} /></span>
@@ -832,11 +854,12 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
             </div>
           ) : data?.items.length ? (
             <div className="store-grid">
+              {refreshing ? <div className="store-refresh-indicator" role="status"><span>{t.loading}</span></div> : null}
               {data.items.map(item => (
                 <CommerceCard key={item.product.id} item={item} rate={data.pricing?.usdToYer} />
               ))}
             </div>
-          ) : (
+          ) : !initialLoading && !refreshing ? (
             <div className="store-empty-box">
               <div className="store-empty-icon-wrap">
                 <PackageSearch size={32} />
@@ -855,7 +878,7 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
                 </Link>
               )}
             </div>
-          )}
+          ) : null}
 
           {data && data.total > 24 && (
             <nav className="store-pagination" aria-label="Pagination">
