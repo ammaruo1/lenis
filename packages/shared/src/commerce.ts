@@ -23,7 +23,10 @@ export const CartLine=z.object({variantId:id.optional(),unitId:id.optional(),pac
 export const CartLines=z.array(CartLine).max(100);
 export const Fulfillment=z.object({method:z.enum(['pickup','delivery']),address:z.string().max(1000).default(''),notes:z.string().max(1000).default('')}).refine(v=>v.method!=='delivery'||v.address.trim().length>=10);
 export const Checkout=z.object({previewToken:z.string().length(64),idempotencyKey:z.string().uuid(),currency:z.enum(['USD','YER']),fulfillment:Fulfillment,couponCode:z.string().max(50).optional()});
-export const CustomerCredentials=z.object({phone:z.string().regex(/^\+[1-9]\d{7,14}$/),password:z.string().min(10).max(128)});
+export const CUSTOMER_PASSWORD_MIN = 4;
+const customerPassword = z.string().min(CUSTOMER_PASSWORD_MIN).max(128);
+export const CustomerCredentials=z.object({phone:z.string().regex(/^\+[1-9]\d{7,14}$/),password:customerPassword});
+export const CustomerPasswordResetSchema=z.object({token:z.string().min(30).max(100),password:customerPassword});
 export const CustomerRegistration=CustomerCredentials.extend({name:z.string().trim().min(2).max(150)});
 export const OrderStatuses=['new','review','confirmed','preparing','ready_pickup','out_delivery','completed','cancelled'] as const;
 export type CartLineInput=z.infer<typeof CartLine>;

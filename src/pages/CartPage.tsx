@@ -24,6 +24,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { useCatalog, useExchangeRate } from '@/data/CatalogContext';
 import { calculateYer, formatPriceYer } from '@/lib/currency';
 import { trackWhatsappClick } from '@/analytics';
+import { CUSTOMER_PASSWORD_MIN } from '@aljeel/shared';
 import {
   shopApi,
   getLocalCartPreview,
@@ -742,7 +743,7 @@ export default function CartPage() {
                       </label>
                       <textarea
                         required
-                        minLength={10}
+                        minLength={CUSTOMER_PASSWORD_MIN}
                         maxLength={1000}
                         rows={2}
                         value={address}
