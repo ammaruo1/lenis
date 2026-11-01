@@ -10,7 +10,11 @@ import {audit} from './audit.js';
 import {validateAndCalculateCoupon} from './coupon-service.js';
 import type {CouponValidationResult} from '@aljeel/shared';
 type Db=PrismaClient|Prisma.TransactionClient;
-export type SnapshotItem={variantId:string;unitId:string|null;productId:string;sku:string;title:unknown;options:unknown;condition:string;inspection:unknown;defects:unknown;quantity:number;unitPriceUsd:string|null;linePriceUsd:string|null;packageId:string|null;priceIncluded?:boolean;images:string[];warrantyMonths:number|null};
+export type SnapshotItem={variantId:string;unitId:string|null;productId:string;sku:string;title:unknown;options:unknown;condition:string;inspection:unknown;defects:unknown;quantity:number;unitPriceUsd:string|null;linePriceUsd:string|null;packageId:string|null;priceIncluded?:boolean;onSale?:boolean;images:string[];warrantyMonths:number|null};
+const explicitSale=(specs:Record<string,unknown>,productSpecs:unknown,variantSpecs:unknown,priceUsd:string|null)=>{
+  const raw=specs.originalPriceUsd??jsonObject(variantSpecs).originalPriceUsd??jsonObject(productSpecs).originalPriceUsd;
+  return raw!==null&&raw!==undefined&&priceUsd!==null&&Number(raw)>Number(priceUsd);
+};
 export function normalizeLines(lines:CartLineInput[]):CartLineInput[]{
   const result=new Map<string,CartLineInput>();
   for(const line of lines){const key=JSON.stringify([line.variantId,line.unitId,line.packageId,[...(line.unitIds??[])].sort()]);const prior=result.get(key);const quantity=(prior?.quantity??0)+line.quantity;if(quantity>100||(line.unitId||line.unitIds?.length)&&quantity>1)throw new ApiError(400,'invalid_quantity');result.set(key,{...line,quantity});}
@@ -45,7 +49,7 @@ export async function cartPreview(db:Db,raw:unknown,couponCode?:string|null,cust
     if(!o?.available||v.inventoryMode==='quantity'&&v.quantity<quantity)throw new ApiError(409,'insufficient_stock');
     if(unitId){if(usedUnits.has(unitId))throw new ApiError(409,'duplicate_unit');usedUnits.add(unitId);}
     const price=o.priceUsd===null?null:new Prisma.Decimal(o.priceUsd).mul(quantity);
-    const snapshot:SnapshotItem={variantId,unitId:unitId??null,productId:v.productId,sku:v.sku,title:v.product.title,options:v.options,condition:o.condition,inspection:o.inspection,defects:o.defects,quantity,unitPriceUsd:o.priceUsd,linePriceUsd:price?.toFixed(2)??null,packageId,images:o.images,warrantyMonths:o.warrantyMonths};
+    const snapshot:SnapshotItem={variantId,unitId:unitId??null,productId:v.productId,sku:v.sku,title:v.product.title,options:v.options,condition:o.condition,inspection:o.inspection,defects:o.defects,quantity,unitPriceUsd:o.priceUsd,linePriceUsd:price?.toFixed(2)??null,packageId,onSale:explicitSale(o.specs,v.product.specs,v.specs,o.priceUsd),images:o.images,warrantyMonths:o.warrantyMonths};
     items.push(snapshot);return price;
   }
   for(const line of lines){

@@ -173,8 +173,11 @@ export async function commerceRoutes(app:FastifyInstance,db:PrismaClient,config:
       const c=await customer(request),input=Checkout.parse(request.body);
       const order=await transaction(db,async tx=>{
         const prior=await tx.commerceOrder.findUnique({where:{customerId_idempotencyKey:{customerId:c!.id,idempotencyKey:input.idempotencyKey}}});if(prior)return prior;
+        await tx.$queryRaw`SELECT id FROM CustomerAccount WHERE id = ${c!.id} FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM PricingConfig WHERE id = 1 FOR UPDATE`;
         const shopping=await tx.shoppingCart.findUnique({where:{customerId:c!.id}}),preview=await cartPreview(tx,shopping?.items??[],input.couponCode,c!.id);
         if(!preview.items.length)throw new ApiError(400,'empty_cart');
+        if(preview.hasUnpriced)throw new ApiError(409,'unpriced_items');
         if(preview.previewToken!==input.previewToken)throw new ApiError(409,'prices_changed');
         if(input.currency==='YER'&&!preview.usdToYer)throw new ApiError(409,'rate_not_set');
         if(input.couponCode&&!preview.appliedCoupon?.valid)throw new ApiError(409,'coupon_invalid');

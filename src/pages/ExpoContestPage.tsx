@@ -246,6 +246,11 @@ export default function ExpoContestPage() {
         throw new Error(json.error?.code || 'failed');
       }
 
+      if (json.alreadyRegistered) {
+        setErrorMsg(typeof json.message === 'string' ? json.message : (isAr ? 'هذا الرقم مسجل مسبقاً' : 'This number is already registered'));
+        return;
+      }
+
       if (json.ticket) {
         setTicket(json.ticket);
         localStorage.setItem('aljeel_expo_my_ticket', JSON.stringify(json.ticket));

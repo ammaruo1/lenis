@@ -123,20 +123,9 @@ export function resolveGeo(
 
   // 2. IP Range Heuristics if no Cloudflare country or if local/Yemen
   if (!countryCode || countryCode === 'XX' || countryCode === 'T1') {
-    if (isYemenIp(ip)) {
-      countryCode = 'YE';
-    } else if (hints?.tz === 'Asia/Aden' || hints?.locale?.includes('YE')) {
-      countryCode = 'YE';
-    } else if (hints?.tz === 'Asia/Riyadh' || hints?.locale?.includes('SA')) {
-      countryCode = 'SA';
-    } else if (hints?.tz === 'Africa/Cairo' || hints?.locale?.includes('EG')) {
-      countryCode = 'EG';
-    } else if (hints?.tz === 'Asia/Dubai' || hints?.locale?.includes('AE')) {
-      countryCode = 'AE';
-    } else {
-      // Default to Yemen for primary customer base if indeterminate in dev/local
-      countryCode = 'YE';
-    }
+    // Client timezone/locale hints are not a trusted geo source.
+    void hints;
+    countryCode = isYemenIp(ip) ? 'YE' : 'YE';
   }
 
   const countryInfo = COUNTRIES[countryCode] || {

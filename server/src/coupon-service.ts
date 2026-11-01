@@ -154,10 +154,7 @@ export async function validateAndCalculateCoupon(
       };
     }
     const completedOrders = await db.commerceOrder.count({
-      where: {
-        customerId: context.customerId,
-        status: { not: 'cancelled' },
-      },
+      where: { customerId: context.customerId },
     });
     if (completedOrders > 0) {
       return {
@@ -279,6 +276,7 @@ export async function validateAndCalculateCoupon(
 
     for (const item of context.items) {
       if (!item.linePriceUsd) continue;
+      if (coupon.excludeDiscounted && item.onSale) continue;
       const prod = productMap.get(item.productId);
       if (!prod) continue;
 
@@ -293,6 +291,22 @@ export async function validateAndCalculateCoupon(
       eligibleSubtotalUsd = eligibleSubtotalUsd.add(new Prisma.Decimal(item.linePriceUsd));
     }
 
+    if (eligibleSubtotalUsd.isZero()) {
+      return {
+        valid: false,
+        code: normalizedCode,
+        reason: 'no_eligible_items',
+        message: {
+          ar: 'لا توجد منتجات مشمولة بهذا الكوبون في سلة المشتريات',
+          en: 'None of the items in your cart are eligible for this coupon',
+        },
+      };
+    }
+  } else if (coupon.excludeDiscounted) {
+    for (const item of context.items) {
+      if (!item.linePriceUsd || item.onSale) continue;
+      eligibleSubtotalUsd = eligibleSubtotalUsd.add(new Prisma.Decimal(item.linePriceUsd));
+    }
     if (eligibleSubtotalUsd.isZero()) {
       return {
         valid: false,
@@ -383,11 +397,25 @@ export async function recordCouponRedemption(
     customerPhone?: string | null;
   }
 ) {
-  // Update coupon atomic counter
+  const coupon = await tx.coupon.findUnique({ where: { id: params.couponId } });
+  if (!coupon?.active) throw new ApiError(409, 'coupon_invalid_or_inactive');
+  if (coupon.firstOrderOnly) {
+    const priorOrders = await tx.commerceOrder.count({
+      where: { customerId: params.customerId, NOT: { id: params.orderId } },
+    });
+    if (priorOrders > 0) throw new ApiError(409, 'coupon_invalid');
+  }
+  if (coupon.usageLimitPerCustomer !== null) {
+    const uses = await tx.couponUsage.count({
+      where: { couponId: coupon.id, customerId: params.customerId },
+    });
+    if (uses >= coupon.usageLimitPerCustomer) throw new ApiError(409, 'coupon_invalid');
+  }
   const updated = await tx.coupon.updateMany({
     where: {
       id: params.couponId,
       active: true,
+      ...(coupon.usageLimitTotal !== null ? { usedCount: { lt: coupon.usageLimitTotal } } : {}),
     },
     data: {
       usedCount: { increment: 1 },

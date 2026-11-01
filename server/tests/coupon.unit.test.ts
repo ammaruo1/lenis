@@ -383,4 +383,49 @@ describe('validateAndCalculateCoupon calculation engine', () => {
       expect(res.reason).toBe('first_order_only');
     }
   });
+
+  it('skips explicitly discounted lines when excludeDiscounted is set', async () => {
+    const mockDb = {
+      coupon: {
+        findFirst: async () => ({
+          id: 'c5',
+          code: 'NOSALE',
+          title: { ar: 'بدون تخفيض', en: 'No sale items' },
+          active: true,
+          discountType: 'percentage',
+          discountValue: new Prisma.Decimal(10),
+          maxDiscountUsd: null,
+          minOrderAmountUsd: null,
+          startDate: null,
+          endDate: null,
+          usageLimitTotal: null,
+          usageLimitPerCustomer: null,
+          usedCount: 0,
+          firstOrderOnly: false,
+          excludeDiscounted: true,
+          applicableCategories: [],
+          excludedCategories: [],
+          applicableBrands: [],
+          excludedBrands: [],
+          applicableProducts: [],
+          customerPhones: [],
+        }),
+      },
+    } as any;
+
+    const res = await validateAndCalculateCoupon(mockDb, {
+      code: 'NOSALE',
+      items: [
+        { ...dummyItems[0], onSale: true, linePriceUsd: '200.00' },
+        { ...dummyItems[1], onSale: false, linePriceUsd: '100.00' },
+      ],
+      subtotalUsd: new Prisma.Decimal('300.00'),
+    });
+
+    expect(res.valid).toBe(true);
+    if (res.valid) {
+      expect(res.discountUsd).toBe('10.00');
+      expect(res.totalUsd).toBe('290.00');
+    }
+  });
 });
