@@ -69,6 +69,23 @@ export interface CouponEvaluationContext {
   exchangeRate?: Prisma.Decimal | null;
 }
 
+/** Priced cart line amount (bundle components with priceIncluded contribute via the bundle header line). */
+function pricedLineUsd(item: SnapshotItem, items: SnapshotItem[]): string | null {
+  if (item.linePriceUsd) return item.linePriceUsd;
+  if (item.priceIncluded && item.packageId) return null;
+  return null;
+}
+
+function packageHasEligibleProduct(
+  packageId: string,
+  items: SnapshotItem[],
+  matches: (productId: string) => boolean
+): boolean {
+  return items.some((i) => i.packageId === packageId && matches(i.productId));
+}
+
+const countedPackageIds = () => new Set<string>();
+
 export async function validateAndCalculateCoupon(
   db: Db,
   context: CouponEvaluationContext
@@ -265,6 +282,22 @@ export async function validateAndCalculateCoupon(
     applicableProducts.length > 0;
 
   let eligibleSubtotalUsd = new Prisma.Decimal(0);
+  const packageCounted = countedPackageIds();
+
+  const productMatchesScope = (
+    productId: string,
+    prod: { category: string; brandId: string } | undefined
+  ): boolean => {
+    if (!prod) return false;
+    if (applicableProducts.length > 0 && !applicableProducts.includes(productId)) return false;
+    if (applicableBrands.length > 0 && !applicableBrands.includes(prod.brandId)) return false;
+    if (excludedBrands.includes(prod.brandId)) return false;
+    if (prod.category) {
+      if (applicableCategories.length > 0 && !applicableCategories.includes(prod.category)) return false;
+      if (excludedCategories.includes(prod.category)) return false;
+    }
+    return true;
+  };
 
   if (hasItemFiltering) {
     const productIds = [...new Set(context.items.map((i) => i.productId))];
@@ -275,20 +308,24 @@ export async function validateAndCalculateCoupon(
     const productMap = new Map(products.map((p) => [p.id, p]));
 
     for (const item of context.items) {
-      if (!item.linePriceUsd) continue;
+      const lineUsd = pricedLineUsd(item, context.items);
+      if (!lineUsd) continue;
       if (coupon.excludeDiscounted && item.onSale) continue;
-      const prod = productMap.get(item.productId);
-      if (!prod) continue;
 
-      if (applicableProducts.length > 0 && !applicableProducts.includes(item.productId)) continue;
-      if (applicableBrands.length > 0 && !applicableBrands.includes(prod.brandId)) continue;
-      if (excludedBrands.includes(prod.brandId)) continue;
-      if (prod.category) {
-        if (applicableCategories.length > 0 && !applicableCategories.includes(prod.category)) continue;
-        if (excludedCategories.includes(prod.category)) continue;
+      if (item.packageId) {
+        if (packageCounted.has(item.packageId)) continue;
+        const prod = productMap.get(item.productId);
+        const bundleEligible = packageHasEligibleProduct(item.packageId, context.items, (pid) =>
+          productMatchesScope(pid, productMap.get(pid))
+        );
+        if (!bundleEligible) continue;
+        packageCounted.add(item.packageId);
+      } else {
+        const prod = productMap.get(item.productId);
+        if (!productMatchesScope(item.productId, prod)) continue;
       }
 
-      eligibleSubtotalUsd = eligibleSubtotalUsd.add(new Prisma.Decimal(item.linePriceUsd));
+      eligibleSubtotalUsd = eligibleSubtotalUsd.add(new Prisma.Decimal(lineUsd));
     }
 
     if (eligibleSubtotalUsd.isZero()) {
@@ -303,9 +340,15 @@ export async function validateAndCalculateCoupon(
       };
     }
   } else if (coupon.excludeDiscounted) {
+    const packageCountedEx = countedPackageIds();
     for (const item of context.items) {
-      if (!item.linePriceUsd || item.onSale) continue;
-      eligibleSubtotalUsd = eligibleSubtotalUsd.add(new Prisma.Decimal(item.linePriceUsd));
+      const lineUsd = pricedLineUsd(item, context.items);
+      if (!lineUsd || item.onSale) continue;
+      if (item.packageId) {
+        if (packageCountedEx.has(item.packageId)) continue;
+        packageCountedEx.add(item.packageId);
+      }
+      eligibleSubtotalUsd = eligibleSubtotalUsd.add(new Prisma.Decimal(lineUsd));
     }
     if (eligibleSubtotalUsd.isZero()) {
       return {

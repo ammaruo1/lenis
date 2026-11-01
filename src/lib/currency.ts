@@ -21,7 +21,8 @@ export function calculateYer(
     ? Number(rate)
     : DEFAULT_USD_TO_YER_RATE;
 
-  return Math.round(numUsd * numRate);
+  // Match server cart/catalog YER: 2 decimal places (Prisma Decimal .toFixed(2))
+  return Number((numUsd * numRate).toFixed(2));
 }
 
 export function formatPriceYer(

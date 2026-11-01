@@ -162,9 +162,11 @@ export async function commerceRoutes(app:FastifyInstance,db:PrismaClient,config:
     });
     store.post('/cart',async(request,reply)=>{
       const input=z.object({items:CartLines}).parse(request.body),c=await cart(request,reply),lines=normalizeLines(input.items);
-      await cartPreview(db,lines);
+      const account=await customer(request,false);
+      const couponCode=(request.query as {coupon?:string})?.coupon??null;
+      const preview=await cartPreview(db,lines,couponCode,account?.id);
       await db.shoppingCart.update({where:{id:c.id},data:{items:lines as Prisma.InputJsonValue}});
-      return {ok:true};
+      return {...preview,rawLines:preview.lines,ok:true};
     });
     store.delete('/cart/:index',async(request,reply)=>{
       const c=await cart(request,reply),index=z.coerce.number().int().min(0).parse((request.params as {index:string}).index),lines=CartLines.parse(c.items);lines.splice(index,1);await db.shoppingCart.update({where:{id:c.id},data:{items:lines as Prisma.InputJsonValue}});return {ok:true};
@@ -177,7 +179,11 @@ export async function commerceRoutes(app:FastifyInstance,db:PrismaClient,config:
     store.post('/orders',async(request,reply)=>{
       const c=await customer(request),input=Checkout.parse(request.body);
       const order=await transaction(db,async tx=>{
-        const prior=await tx.commerceOrder.findUnique({where:{customerId_idempotencyKey:{customerId:c!.id,idempotencyKey:input.idempotencyKey}}});if(prior)return prior;
+        const prior=await tx.commerceOrder.findUnique({where:{customerId_idempotencyKey:{customerId:c!.id,idempotencyKey:input.idempotencyKey}}});
+        if(prior){
+          if(prior.status!=='cancelled')return prior;
+          await tx.commerceOrder.update({where:{id:prior.id},data:{idempotencyKey:`${prior.idempotencyKey}:archived:${prior.id}`}});
+        }
         await tx.$queryRaw`SELECT id FROM CustomerAccount WHERE id = ${c!.id} FOR UPDATE`;
         await tx.$queryRaw`SELECT id FROM PricingConfig WHERE id = 1 FOR UPDATE`;
         let shopping=await tx.shoppingCart.findUnique({where:{customerId:c!.id}});

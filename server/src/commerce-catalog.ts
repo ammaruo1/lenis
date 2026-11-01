@@ -608,6 +608,8 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
     include: { products: true }
   });
   if (!collection) throw new ApiError(404, 'not_found');
+  const rules = CollectionRules.parse(collection.rules);
+  if (rules.endsAt && new Date(rules.endsAt).getTime() <= Date.now()) throw new ApiError(404, 'not_found');
   const cache = await publishedRows(db);
   const { rows, categories } = cache;
   const aux = await getAuxData(db, categories);
@@ -625,6 +627,20 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
         return offList.some(o => ruleMatches(collection.rules, r, o, categories));
       });
 
+  const applyCollectionDiscount = (o: Sellable): Sellable => {
+    if (!rules.discountPct || !o.priceUsd) return o;
+    const base = new Prisma.Decimal(o.priceUsd);
+    const discounted = base.mul(100 - rules.discountPct).div(100).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+    const orig = o.originalPriceUsd ?? o.priceUsd;
+    const pct = Math.round(((Number(orig) - Number(discounted.toFixed(2))) / Number(orig)) * 100);
+    return {
+      ...o,
+      originalPriceUsd: orig,
+      priceUsd: discounted.toFixed(2),
+      discountPercent: pct > 0 ? pct : o.discountPercent,
+    };
+  };
+
   const productsMap = new Map<string, { product: unknown; brandId: string; offers: unknown[]; fields: unknown[] }>();
   for (const r of matchedRows) {
     const pId = r.productId;
@@ -636,13 +652,18 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
         fields: fieldsFor(r)
       });
     }
-    const offList = offers(r).map(o => ({
-      ...o,
-      priceYer: priceInYer(o.priceUsd, pricing?.usdToYer),
-      originalPriceYer: priceInYer(o.originalPriceUsd ?? null, pricing?.usdToYer)
-    }));
+    const offList = offers(r)
+      .filter(o => o.available)
+      .map(o => applyCollectionDiscount(o))
+      .map(o => ({
+        ...o,
+        priceYer: priceInYer(o.priceUsd, pricing?.usdToYer),
+        originalPriceYer: priceInYer(o.originalPriceUsd ?? null, pricing?.usdToYer)
+      }));
     productsMap.get(pId)!.offers.push(...offList);
   }
+
+  const items = [...productsMap.values()].filter(entry => (entry.offers as Sellable[]).length > 0);
 
   return {
     collection: {
@@ -655,7 +676,7 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
       sort: collection.sort,
       updatedAt: collection.updatedAt.toISOString(),
     },
-    items: [...productsMap.values()],
+    items,
     pricing: pricing ? { usdToYer: pricing.usdToYer?.toString() ?? null } : null
   };
 }

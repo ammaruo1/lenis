@@ -171,7 +171,11 @@ export async function changeOrder(db:PrismaClient,config:AppConfig,request:Fasti
         if(item.unitId){const changed=await tx.inventoryUnit.updateMany({where:{id:item.unitId,variantId:v.id,available:true,soldOrderId:null},data:{available:false,soldOrderId:id}});if(changed.count!==1)throw new ApiError(409,'insufficient_stock');}
         else {const changed=await tx.productVariant.updateMany({where:{id:v.id,inventoryMode:'quantity',inventoryReviewed:true,quantity:{gte:item.quantity}},data:{quantity:{decrement:item.quantity}}});if(changed.count!==1)throw new ApiError(409,'insufficient_stock');}
         await tx.inventoryMovement.create({data:{variantId:v.id,unitId:item.unitId,delta:-item.quantity,orderId:id,userId:request.auth!.user.id,reason:'Order '+order.number+' completed'}});
-        await tx.sale.create({data:{productId:item.productId,serialNumber:item.unitId?(await tx.inventoryUnit.findUniqueOrThrow({where:{id:item.unitId}})).serialNumber:null,priceUsd:item.unitPriceUsd,warrantyMonths:item.warrantyMonths,warrantyStart:new Date(),notes:'Order '+order.number+'; quantity '+item.quantity}});
+        // Bundle components are priceIncluded: record revenue on the priced bundle line only.
+        if(!item.priceIncluded){
+          const salePrice=item.linePriceUsd??item.unitPriceUsd;
+          await tx.sale.create({data:{productId:item.productId,serialNumber:item.unitId?(await tx.inventoryUnit.findUniqueOrThrow({where:{id:item.unitId}})).serialNumber:null,priceUsd:salePrice,warrantyMonths:item.warrantyMonths,warrantyStart:new Date(),notes:'Order '+order.number+'; quantity '+item.quantity+(item.packageId?'; package '+item.packageId:'')}});
+        }
       }
     }
     const after=await tx.commerceOrder.update({where:{id},data:{status,...(status==='completed'?{completedAt:new Date()}:{})}});

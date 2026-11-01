@@ -57,7 +57,7 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
   // A search from a category route searches the whole catalog unless the user
   // explicitly selected a category in the search filters.
   const routeCategory = initialCategory || (rawCategory === 'browser' ? undefined : rawCategory);
-  const category = params.has('q') ? (params.get('category') || undefined) : routeCategory;
+  const category = params.has('q') ? (params.get('category') || routeCategory) : routeCategory;
 
   const [data, setData] = useState<SearchResult | null>(null);
   const [error, setError] = useState('');
@@ -271,10 +271,17 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
   };
 
   const submitSearch = (value: string) => {
-    const term=value.trim();
+    const term = value.trim();
     setSearch(term);
     setSearchFocused(false);
-    navigate({ pathname: `/${language}/shop`, search: term ? `?${new URLSearchParams({q:term})}` : '' });
+    const next = new URLSearchParams();
+    if (term) next.set('q', term);
+    if (term && routeCategory) next.set('category', routeCategory);
+    const search = next.toString();
+    navigate({
+      pathname: routeCategory ? `/${language}/shop/${routeCategory}` : `/${language}/shop`,
+      search: search ? `?${search}` : '',
+    });
   };
 
   const hasSearchSuggestions = searchFocused && search.trim().length >= 2;

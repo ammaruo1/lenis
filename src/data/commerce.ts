@@ -191,7 +191,15 @@ export async function removeCartItem(index: number) {
     window.dispatchEvent(new Event('store-cart-changed'));
   }
   try {
-    await shopApi(`/cart/${index}`, 'DELETE');
+    await shopApi('/cart', 'POST', {
+      items: lines.map((l) => ({
+        variantId: l.variantId,
+        packageId: l.packageId,
+        quantity: l.quantity,
+        unitId: l.unitId,
+        unitIds: l.unitIds,
+      })),
+    });
   } catch {}
 }
 
