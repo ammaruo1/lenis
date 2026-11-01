@@ -166,8 +166,13 @@ export default function CommerceCard({ item, rate, badge }: { item: CatalogItem;
     try { return JSON.parse(localStorage.getItem('al-arabi-favorites') || '[]').includes(p.id); } catch { return false; }
   });
 
-  const priced = item.offers.filter(o => o.priceUsd !== null).sort((a, b) => Number(a.priceUsd) - Number(b.priceUsd));
-  const o = priced[0] ?? item.offers[0];
+  const inStock = item.offers.filter(
+    (o) => o.available && (o.availabilityMode ?? 'in_stock') === 'in_stock' && o.priceUsd !== null
+  );
+  const priced = (inStock.length ? inStock : item.offers.filter((o) => o.priceUsd !== null)).sort(
+    (a, b) => Number(a.priceUsd) - Number(b.priceUsd)
+  );
+  const o = priced[0] ?? item.offers.find((x) => x.available) ?? item.offers[0];
   const effectiveYer = calculateYer(o?.priceUsd, effectiveRate, o?.priceYer);
   const yerFormatted = formatPriceYer(effectiveYer, language);
   const isLaptop = p.category === 'laptops';

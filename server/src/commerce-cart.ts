@@ -46,7 +46,10 @@ export async function cartPreview(db:Db,raw:unknown,couponCode?:string|null,cust
     const seen=new Set<string>();while(category){if(seen.has(category))throw new ApiError(409,'item_unavailable');seen.add(category);const c=categoryMap.get(category);if(!c||c.status!=='published')throw new ApiError(409,'item_unavailable');category=c.parentSlug;}
     if(v.inventoryMode==='serialized'&&(!unitId||quantity!==1)||v.inventoryMode==='quantity'&&unitId)throw new ApiError(400,'select_unit');
     const o=offers(v).find(o=>o.unitId===unitId);
-    if(!o?.available||v.inventoryMode==='quantity'&&v.quantity<quantity)throw new ApiError(409,'insufficient_stock');
+    const availMode=((v as Record<string,unknown>).availabilityMode||'in_stock') as string;
+    const isPreorder=availMode==='local_order'||availMode==='external_order';
+    if(!o?.available)throw new ApiError(409,'insufficient_stock');
+    if(!isPreorder&&v.inventoryMode==='quantity'&&v.quantity<quantity)throw new ApiError(409,'insufficient_stock');
     if(unitId){if(usedUnits.has(unitId))throw new ApiError(409,'duplicate_unit');usedUnits.add(unitId);}
     const price=o.priceUsd===null?null:new Prisma.Decimal(o.priceUsd).mul(quantity);
     const snapshot:SnapshotItem={variantId,unitId:unitId??null,productId:v.productId,sku:v.sku,title:v.product.title,options:v.options,condition:o.condition,inspection:o.inspection,defects:o.defects,quantity,unitPriceUsd:o.priceUsd,linePriceUsd:price?.toFixed(2)??null,packageId,onSale:explicitSale(o.specs,v.product.specs,v.specs,o.priceUsd),images:o.images,warrantyMonths:o.warrantyMonths};
@@ -78,7 +81,12 @@ export async function cartPreview(db:Db,raw:unknown,couponCode?:string|null,cust
   // تجميع الكميات والتحقق من توفر المخزون عبر إعادة استخدام المتغيرات المحملة مسبقاً في الذاكرة دون استعلامات إضافية
   const quantities=new Map<string,number>();
   for(const item of items)if(!item.unitId)quantities.set(item.variantId,(quantities.get(item.variantId)??0)+item.quantity);
-  for(const [id,qty]of quantities){const variant=variantCache.get(id);if(!variant||variant.quantity<qty)throw new ApiError(409,'insufficient_stock');}
+  for(const [id,qty]of quantities){
+    const variant=variantCache.get(id);
+    if(!variant)throw new ApiError(409,'insufficient_stock');
+    const mode=((variant as Record<string,unknown>).availabilityMode||'in_stock') as string;
+    if(mode==='in_stock'&&variant.quantity<qty)throw new ApiError(409,'insufficient_stock');
+  }
   const rate=pricing?.usdToYer??null;
   let appliedCoupon: CouponValidationResult | null = null;
   let discountUsd = new Prisma.Decimal(0);
@@ -120,7 +128,21 @@ export async function cartPreview(db:Db,raw:unknown,couponCode?:string|null,cust
     deliveryFee: null,
     errors,
   };
-  const previewToken=createHash('sha256').update(JSON.stringify(preview)).digest('hex');
+  const tokenPayload={
+    lines,
+    items:items.map(i=>({variantId:i.variantId,unitId:i.unitId,packageId:i.packageId,quantity:i.quantity,unitPriceUsd:i.unitPriceUsd,linePriceUsd:i.linePriceUsd,priceIncluded:i.priceIncluded??false})),
+    subtotalUsd:preview.subtotalUsd,
+    subtotalYer:preview.subtotalYer,
+    discountUsd:preview.discountUsd,
+    discountYer:preview.discountYer,
+    totalUsd:preview.totalUsd,
+    totalYer:preview.totalYer,
+    hasUnpriced:preview.hasUnpriced,
+    usdToYer:preview.usdToYer,
+    rateAt:preview.rateAt,
+    couponId:appliedCoupon?.valid?appliedCoupon.coupon.id:null,
+  };
+  const previewToken=createHash('sha256').update(JSON.stringify(tokenPayload)).digest('hex');
   return {...preview,previewToken};
 }
 const transitions:Record<string,string[]>={

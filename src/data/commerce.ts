@@ -56,6 +56,31 @@ export type StoredCartLine = CartLineInput & {
 };
 
 const LOCAL_CART_KEY = 'alarbi_local_cart_v1';
+export const APPLIED_COUPON_KEY = 'alarbi_applied_coupon_v1';
+
+function lineMergeKey(line: CartLineInput): string {
+  return JSON.stringify([
+    line.variantId ?? null,
+    line.unitId ?? null,
+    line.packageId ?? null,
+    [...(line.unitIds ?? [])].sort(),
+  ]);
+}
+
+function mergeCartLines(existing: StoredCartLine[], incoming: CartLineInput, meta?: CartExtraMeta): StoredCartLine[] {
+  const lines = [...existing];
+  const key = lineMergeKey(incoming);
+  const idx = lines.findIndex((l) => lineMergeKey(l) === key);
+  if (idx >= 0) {
+    const prior = lines[idx];
+    const nextQty =
+      incoming.unitId || incoming.unitIds?.length ? 1 : Math.min(100, prior.quantity + (incoming.quantity || 1));
+    lines[idx] = { ...prior, ...incoming, quantity: nextQty, meta: meta ? { ...prior.meta, ...meta } : prior.meta };
+  } else {
+    lines.push({ ...incoming, quantity: incoming.quantity || 1, meta });
+  }
+  return lines;
+}
 
 export function getLocalCartLines(): StoredCartLine[] {
   if (typeof window === 'undefined') return [];
@@ -71,6 +96,15 @@ export function saveLocalCartLines(lines: StoredCartLine[]): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(lines));
+  } catch {}
+}
+
+/** Replace offline cart cache with the authenticated server cart (after login/register merge). */
+export async function syncCartFromServer(): Promise<void> {
+  try {
+    const preview = await shopApi<Preview>('/cart');
+    saveLocalCartLines(preview.rawLines as StoredCartLine[]);
+    window.dispatchEvent(new Event('store-cart-changed'));
   } catch {}
 }
 
@@ -136,27 +170,14 @@ export function getLocalCartPreview(): Preview {
 }
 
 export async function addCart(line: CartLineInput, meta?: CartExtraMeta) {
-  // 1. Update resilient local storage
-  const lines = getLocalCartLines();
-  const existingIndex = line.packageId
-    ? lines.findIndex((l) => l.packageId === line.packageId)
-    : lines.findIndex((l) => l.variantId === line.variantId && l.unitId === line.unitId);
-
-  if (existingIndex >= 0) {
-    lines[existingIndex].quantity += (line.quantity || 1);
-    if (meta) lines[existingIndex].meta = { ...lines[existingIndex].meta, ...meta };
-  } else {
-    lines.push({ ...line, quantity: line.quantity || 1, meta });
-  }
+  const lines = mergeCartLines(getLocalCartLines(), line, meta);
   saveLocalCartLines(lines);
   window.dispatchEvent(new Event('store-cart-changed'));
 
-  // 2. Synchronize with server if available
   try {
     const cart = await shopApi<Preview>('/cart');
-    if (!(line.unitId && cart.rawLines.some((l) => l.unitId === line.unitId))) {
-      await shopApi('/cart', 'POST', { items: [...cart.rawLines, line] });
-    }
+    const serverLines = mergeCartLines(cart.rawLines, line);
+    await shopApi('/cart', 'POST', { items: serverLines });
   } catch {
     // Graceful offline fallback
   }
@@ -183,14 +204,23 @@ export async function updateCartQuantity(index: number, quantity: number) {
   }
   try {
     await shopApi('/cart', 'POST', {
-      items: lines.map((l) => ({ variantId: l.variantId, packageId: l.packageId, quantity: l.quantity, unitId: l.unitId }))
+      items: lines.map((l) => ({
+        variantId: l.variantId,
+        packageId: l.packageId,
+        quantity: l.quantity,
+        unitId: l.unitId,
+        unitIds: l.unitIds,
+      })),
     });
   } catch {}
 }
 
-export function clearCart() {
+export async function clearCart() {
   saveLocalCartLines([]);
   window.dispatchEvent(new Event('store-cart-changed'));
+  try {
+    await shopApi('/cart', 'DELETE');
+  } catch {}
 }
 export const commerceCopy={
   ar:{close:'إغلاق',filterHint:'حدد الفلاتر ثم اعرض النتائج.',from:'ابتداءً من',included:'مشمول في سعر الباقة',shop:'اختر التقنية المناسبة لك',intro:'تصفّح حسب القسم والمواصفات، وأكمل طلبك عبر واتساب من السلة.',search:'ابحث عن جهاز أو موديل أو SKU',all:'كل الأقسام',filters:'الفلاتر',apply:'عرض النتائج',reset:'مسح الكل',brand:'العلامة',condition:'الحالة',collection:'المجموعات',available:'المتوفر فقط',min:'من $',max:'إلى $',newest:'الأحدث',relevance:'الأكثر صلة',priceAsc:'السعر: الأقل أولًا',priceDesc:'السعر: الأعلى أولًا',name:'الاسم',battery:'صحة البطارية',empty:'المنتجات قيد التجهيز',emptyNote:'سيظهر الكتالوج هنا بعد نشر المنتجات من الإدارة.',noResults:'لا توجد نتائج لهذه الاختيارات',results:'منتج',previous:'السابق',next:'التالي',add:'أضف للسلة',choose:'اختر المواصفات',details:'التفاصيل',ask:'اسأل عن السعر',unknown:'السعر يُؤكد بالتواصل',unavailable:'غير متوفر حاليًا',demo:'منتج توضيحي',cart:'السلة',account:'حسابي',quantity:'الكمية',remove:'حذف',subtotal:'مجموع الأصناف المسعّرة',deliveryFee:'رسوم التوصيل تُؤكد بعد التواصل',noReservation:'الطلب لا يحجز المخزون؛ يُؤكد التوفر مع المتجر.',currency:'عملة العرض',pickup:'استلام من المتجر',delivery:'توصيل',address:'عنوان التوصيل',notes:'ملاحظات',checkout:'اعتماد الطلب',loginRequired:'سجّل الدخول لاعتماد الطلب',login:'دخول',register:'إنشاء حساب',fullName:'الاسم',phone:'الهاتف الدولي',password:'كلمة المرور',forgot:'لاستعادة الحساب، تواصل مع المتجر للتحقق من هويتك والحصول على رابط مؤقت.',orders:'طلباتي',logout:'خروج',follow:'متابعة الطلب عبر واتساب',saved:'تم حفظ الطلب',notSent:'فتح واتساب لا يعني إرسال الرسالة. راجعها ثم أرسلها بنفسك.',noWhatsapp:'رقم واتساب لم يُضبط بعد؛ الطلب محفوظ ويمكن متابعته في حسابك.',cancel:'إلغاء الطلب',emptyCart:'سلتك فارغة',continue:'متابعة التسوق',rateMissing:'سعر صرف الريال لم يُضبط بعد',retry:'إعادة المحاولة',loading:'جارٍ التحميل…',unit:'القطعة',inspection:'الفحص',defects:'ملاحظات الحالة',chooseUnit:'اختر القطعة المنفردة',added:'أُضيف إلى السلة',packages:'باقات متكاملة',resetPassword:'تعيين كلمة مرور جديدة',save:'حفظ',stock:'التوفر',cpuFamily:'عائلة المعالج',cpuGen:'الجيل',ram:'الذاكرة (RAM)',storage:'سعة التخزين (SSD)',gpu:'كرت الشاشة',screenSize:'مقاس الشاشة',touch:'شاشة لمس',performance:'الأعلى أداءً',highestRam:'الأكبر ذاكرة',laptopsSection:'قسم اللابتوبات',laptopsIntro:'فلترة فائقة الذكاء بحسب معمارية المعالج، الذاكرة، التخزين، وكرت الشاشة.'},
