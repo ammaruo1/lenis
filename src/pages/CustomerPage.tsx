@@ -18,6 +18,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { CUSTOMER_PASSWORD_MIN } from '@aljeel/shared';
 import {
   shopApi,
   syncCartFromServer,
@@ -200,7 +201,7 @@ export default function CustomerPage() {
               </label>
               <input
                 type="password"
-                minLength={10}
+                minLength={CUSTOMER_PASSWORD_MIN}
                 maxLength={128}
                 required
                 autoComplete="new-password"
@@ -405,7 +406,7 @@ export default function CustomerPage() {
                   dir="ltr"
                   type="password"
                   required
-                  minLength={10}
+                  minLength={CUSTOMER_PASSWORD_MIN}
                   maxLength={128}
                   autoComplete={isRegister ? 'new-password' : 'current-password'}
                   value={password}

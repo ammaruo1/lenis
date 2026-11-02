@@ -1,7 +1,7 @@
 import type {FastifyInstance,FastifyRequest,FastifyReply} from 'fastify';
 import {Prisma,type PrismaClient} from '@prisma/client';
 import {z} from 'zod';
-import {CartLines,Checkout,CustomerCredentials,CustomerRegistration,OrderStatuses,CouponValidate} from '@aljeel/shared';
+import {CartLines,Checkout,CustomerCredentials,CustomerPasswordResetSchema,CustomerRegistration,OrderStatuses,CouponValidate} from '@aljeel/shared';
 import {hashPassword,verifyPassword,randomToken,hashToken,safeEqual} from './security.js';
 import {ApiError} from './errors.js';
 import type {AppConfig} from './config.js';
@@ -108,7 +108,7 @@ export async function commerceRoutes(app:FastifyInstance,db:PrismaClient,config:
     store.post('/login',{config:{rateLimit:{max:8,timeWindow:'15 minutes'}}},(r,p)=>signIn(r,p));
     store.post('/logout',async(request,reply)=>{if(request.cookies.store_session)await db.customerSession.deleteMany({where:{id:hashToken(request.cookies.store_session)}});reply.clearCookie('store_session',{path:'/api/shop'});return {ok:true};});
     store.post('/reset', {config:{rateLimit:{max:8,timeWindow:'15 minutes'}}},async request=>{
-      const input=z.object({token:z.string().min(30).max(100),password:z.string().min(10).max(128)}).parse(request.body),id=hashToken(input.token),passwordHash=await hashPassword(input.password);
+      const input=CustomerPasswordResetSchema.parse(request.body),id=hashToken(input.token),passwordHash=await hashPassword(input.password);
       return transaction(db,async tx=>{const reset=await tx.customerReset.findUnique({where:{id}});if(!reset||reset.usedAt||reset.expiresAt.getTime()<=Date.now())throw new ApiError(400,'reset_expired');const used=await tx.customerReset.updateMany({where:{id,usedAt:null,expiresAt:{gt:new Date()}},data:{usedAt:new Date()}});if(used.count!==1)throw new ApiError(400,'reset_expired');await tx.customerAccount.update({where:{id:reset.customerId},data:{passwordHash}});await tx.customerSession.deleteMany({where:{customerId:reset.customerId}});await audit(tx,config,request,{action:'customer.password_reset',entity:'CustomerAccount',entityId:reset.customerId});return {ok:true};});
     });
     store.get('/cart',async(request,reply)=>{
