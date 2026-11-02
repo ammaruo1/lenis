@@ -20,6 +20,7 @@ import {
 import { useLanguage } from '@/i18n/LanguageContext';
 import {
   shopApi,
+  syncCartFromServer,
   commerceCopy,
   orderLabels,
   errorText,
@@ -73,6 +74,7 @@ export default function CustomerPage() {
       const res = await shopApi<{ customer: Customer }>(endpoint, 'POST', payload);
       setCustomer(res.customer);
       setPassword('');
+      await syncCartFromServer();
 
       if (params.get('return') === 'cart') {
         navigate(`/${language}/cart`);

@@ -62,10 +62,6 @@ export function offers(v:VariantRow):Sellable[]{
   const rawOrig=specs.originalPriceUsd??(v.specs as Record<string,unknown>)?.originalPriceUsd??(v.product.specs as Record<string,unknown>)?.originalPriceUsd;
   if(rawOrig!==null&&rawOrig!==undefined&&!isNaN(Number(rawOrig))&&Number(rawOrig)>0){
     originalPriceUsdStr=Number(rawOrig).toFixed(2);
-  }else if(priceUsdStr&&Number(priceUsdStr)>0){
-    const baseNum=Number(priceUsdStr);
-    const calculatedOrig=Math.ceil((baseNum*1.15)/5)*5;
-    originalPriceUsdStr=calculatedOrig>baseNum?calculatedOrig.toFixed(2):(baseNum*1.15).toFixed(2);
   }
   const discountPercent=(originalPriceUsdStr&&priceUsdStr&&Number(originalPriceUsdStr)>Number(priceUsdStr))
     ?Math.round(((Number(originalPriceUsdStr)-Number(priceUsdStr))/Number(originalPriceUsdStr))*100)
@@ -225,9 +221,43 @@ async function getAuxData(db: PrismaClient, categories: CatalogCategory[]): Prom
   auxCache = { collections, types, pricing, fieldsByCategory, expiresAt: now + 60_000 };
   return auxCache;
 }
+/** In-stock filter: excludes preorder/backorder lines that are orderable but not on hand. */
+export function isInStockNow(v:VariantRow,o:Sellable):boolean{
+  if(!o.available)return false;
+  const mode=o.availabilityMode??'in_stock';
+  if(mode!=='in_stock')return false;
+  if(v.inventoryMode==='quantity')return v.quantity>0;
+  return true;
+}
+function buildBrandResolver(rows:VariantRow[]){
+  const idToName=new Map<string,string>();
+  const toId=new Map<string,string>();
+  for(const r of rows){
+    const b=r.product.brand;
+    idToName.set(b.id,b.name);
+    toId.set(b.id,b.id);
+    toId.set(normalizeSearch(b.name),b.id);
+    if(b.slug)toId.set(normalizeSearch(b.slug),b.id);
+  }
+  return {idToName,resolve:(values:string[])=>[...new Set(values.map(v=>toId.get(normalizeSearch(v))??toId.get(v)??v))]};
+}
+const STORAGE_ALIASES:Record<number,number[]>={256:[240,250],512:[480,500],1000:[1024],1024:[1000],2000:[2048],2048:[2000]};
+function storageGbMatches(selected:string[],actual:unknown):boolean{
+  if(actual===undefined||actual===null||selected.length===0)return selected.length===0;
+  const n=typeof actual==='number'?actual:Number(actual);
+  if(!Number.isFinite(n))return false;
+  return selected.some(s=>{
+    const pick=Number(s);
+    if(!Number.isFinite(pick))return false;
+    if(pick===n)return true;
+    const aliases=STORAGE_ALIASES[pick]??STORAGE_ALIASES[n]??[];
+    return aliases.includes(n)||aliases.includes(pick);
+  });
+}
 export function ruleMatches(rule:unknown,v:VariantRow,o:Sellable,categories:{slug:string;parentSlug:string|null}[]){
   const r=CollectionRules.parse(rule);
-  return (!r.categories.length||r.categories.some(c=>descendants(categories,c).has(v.product.category)))&&(!r.brands.length||r.brands.includes(v.product.brandId))&&(!r.conditions.length||r.conditions.includes(o.condition as any))&&(r.available===null||r.available===o.available)&&(!r.min||o.priceUsd!==null&&new Prisma.Decimal(o.priceUsd).gte(r.min))&&(!r.max||o.priceUsd!==null&&new Prisma.Decimal(o.priceUsd).lte(r.max));
+  const stockOk=r.available===null||(r.available?isInStockNow(v,o):!o.available);
+  return (!r.categories.length||r.categories.some(c=>descendants(categories,c).has(v.product.category)))&&(!r.brands.length||r.brands.includes(v.product.brandId))&&(!r.conditions.length||r.conditions.includes(o.condition as any))&&stockOk&&(!r.min||o.priceUsd!==null&&new Prisma.Decimal(o.priceUsd).gte(r.min))&&(!r.max||o.priceUsd!==null&&new Prisma.Decimal(o.priceUsd).lte(r.max));
 }
 function cpuRank(family?: string): number {
   if (!family) return 0;
@@ -358,6 +388,9 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
   const aux=await getAuxData(db,categories);
   const {collections,types,pricing,fieldsByCategory}=aux;
   const selected=(key:string)=>params.getAll(key).flatMap(v=>v.split(',')).filter(Boolean);
+  const brandResolver=buildBrandResolver(cache.rows);
+  const brandFilterIds=brandResolver.resolve(selected('brand'));
+  const brandFilterNames=brandFilterIds.map(id=>brandResolver.idToName.get(id)??id);
   const category=params.get('category');const allowed=category?descendants(categories,category):null;
   const rawQ = params.get('q')?.trim() ?? '';
   const query = normalizeSearch(rawQ).replace(/اتش\s*بي/g,'hp');
@@ -394,15 +427,15 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
     const {v,o}=e,p=v.product;
     if(allowed&&!allowed.has(p.category))return false;
     if(!matchesQuery(e))return false;
-    if(skip!=='brand'&&selected('brand').length&&!selected('brand').includes(p.brandId))return false;
+    if(skip!=='brand'&&brandFilterIds.length&&!brandFilterIds.includes(p.brandId))return false;
     if(skip!=='condition'&&selected('condition').length&&!selected('condition').includes(o.condition))return false;
-    if(skip!=='available'&&params.get('available')==='true'&&!o.available)return false;
+    if(skip!=='available'&&params.get('available')==='true'&&!isInStockNow(e.v,e.o))return false;
     if(skip!=='price'&&((params.get('min')&&(!o.priceUsd||new Prisma.Decimal(o.priceUsd).lt(params.get('min')!)))||(params.get('max')&&(!o.priceUsd||new Prisma.Decimal(o.priceUsd).gt(params.get('max')!)))))return false;
     if(skip!=='collection'&&selected('collection').length&&!collections.some(c=>selected('collection').includes(c.id)&&(c.mode==='manual'?c.products.some(x=>x.productId===p.id):ruleMatches(c.rules,v,o,categories))))return false;
     if(p.category==='hard-drives'||p.category==='storage'){
       if(!matchStorageSpecs(p,o.specs,selected,skip))return false;
     }else{
-      if(skip!=='storageGB'&&selected('storageGB').length&&(o.specs.storageGB===undefined||!selected('storageGB').includes(String(o.specs.storageGB))))return false;
+      if(skip!=='storageGB'&&selected('storageGB').length&&!storageGbMatches(selected('storageGB'),o.specs.storageGB))return false;
     }
     if(skip!=='cpuFamily'&&selected('cpuFamily').length&&(!o.specs.cpuFamily||!selected('cpuFamily').includes(String(o.specs.cpuFamily))))return false;
     if(skip!=='cpuBrand'&&selected('cpuBrand').length&&(!o.specs.cpuBrand||!selected('cpuBrand').includes(String(o.specs.cpuBrand))))return false;
@@ -441,7 +474,7 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
 
   for(const e of matchedEntries){const id=e.v.productId,p=e.v.product;const fullTitle=normalizeSearch(String(jsonObject(p.title).ar??''));const model=normalizeSearch(p.model);const brand=normalizeSearch(p.brand.name);const exactBrand=brand===query;const categoryIntent=queryTokens.some(token=>({laptops:['laptop','لابتوب','لابتوبات','notebook','thinkpad'],desktops:['desktop','كمبيوتر','مكتبي'],displays:['monitor','display','شاشة','شاشات'],monitors:['monitor','display','شاشة','شاشات'],storage:['storage','ssd','هارد','تخزين','فلاش'], 'hard-drives':['storage','ssd','هارد','تخزين','فلاش'],cameras:['camera','كاميرا','كاميرات'],audio:['headphones','headphone','سماعة','سماعات','صوتيات']}[p.category]??[]).includes(token));const primaryBrandCategory=p.category==='laptops'?1400:['desktops','displays','monitors','storage','hard-drives'].includes(p.category)?250:0;const intentBoost=categoryIntent?1600:0;const searchRank=query?((fullTitle.includes(query)?500:0)+(model.includes(query)?450:0)+(brand===query?350:brand.includes(query)?180:0)+(exactBrand?primaryBrandCategory:0)+intentBoost+queryTokens.reduce((score,token)=>score+(fullTitle.includes(token)?40:model.includes(token)?35:brand.includes(token)?25:0),0)):0;const item=grouped.get(id)??{product:productDto(p),brandId:p.brandId,offers:[],fields:fieldsFor(e.v),searchRank};item.searchRank=Math.max(item.searchRank,searchRank);item.offers.push({...e.o,priceYer:priceInYer(e.o.priceUsd,pricing?.usdToYer),originalPriceYer:priceInYer(e.o.originalPriceUsd??null,pricing?.usdToYer)});grouped.set(id,item);}
   const items=[...grouped.values()];
-  const minPrice=(x:typeof items[number])=>Math.min(...x.offers.filter(o=>o.priceUsd!==null).map(o=>Number(o.priceUsd)),Infinity);
+  const minPrice=(x:typeof items[number])=>Math.min(...x.offers.filter(o=>o.priceUsd!==null&&o.available&&(o.availabilityMode??'in_stock')==='in_stock').map(o=>Number(o.priceUsd)),...x.offers.filter(o=>o.priceUsd!==null).map(o=>Number(o.priceUsd)),Infinity);
   const sort=params.get('sort')??(query?'relevance':'newest');
   items.sort((a,b)=>{
     if(sort==='relevance')return b.searchRank-a.searchRank||String(jsonObject(a.product.title).ar??'').localeCompare(String(jsonObject(b.product.title).ar??''),'ar');
@@ -486,7 +519,7 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
         brand:e.v.product.brand.name,
         condition:e.o.condition,
         priceUsd:e.o.priceUsd?Number(e.o.priceUsd):null,
-        available:e.o.available,
+        available:isInStockNow(e.v,e.o),
         specs:{
           ...e.o.specs,
           cpuFamily:String(e.o.specs.cpuFamily||extractProcessorFamily(String(e.o.specs.cpu||''))),
@@ -502,7 +535,7 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
       }));
 
     laptopFacets=computeLaptopFacets(laptopItems,{
-      brand:selected('brand'),
+      brand:brandFilterNames.length?brandFilterNames:selected('brand'),
       cpuFamily:selected('cpuFamily'),
       cpuBrand:selected('cpuBrand'),
       cpuGen:selected('cpuGen').map(Number).filter(n=>!isNaN(n)),
@@ -581,6 +614,8 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
     include: { products: true }
   });
   if (!collection) throw new ApiError(404, 'not_found');
+  const rules = CollectionRules.parse(collection.rules);
+  if (rules.endsAt && new Date(rules.endsAt).getTime() <= Date.now()) throw new ApiError(404, 'not_found');
   const cache = await publishedRows(db);
   const { rows, categories } = cache;
   const aux = await getAuxData(db, categories);
@@ -598,6 +633,20 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
         return offList.some(o => ruleMatches(collection.rules, r, o, categories));
       });
 
+  const applyCollectionDiscount = (o: Sellable): Sellable => {
+    if (!rules.discountPct || !o.priceUsd) return o;
+    const base = new Prisma.Decimal(o.priceUsd);
+    const discounted = base.mul(100 - rules.discountPct).div(100).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+    const orig = o.originalPriceUsd ?? o.priceUsd;
+    const pct = Math.round(((Number(orig) - Number(discounted.toFixed(2))) / Number(orig)) * 100);
+    return {
+      ...o,
+      originalPriceUsd: orig,
+      priceUsd: discounted.toFixed(2),
+      discountPercent: pct > 0 ? pct : o.discountPercent,
+    };
+  };
+
   const productsMap = new Map<string, { product: unknown; brandId: string; offers: unknown[]; fields: unknown[] }>();
   for (const r of matchedRows) {
     const pId = r.productId;
@@ -609,13 +658,18 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
         fields: fieldsFor(r)
       });
     }
-    const offList = offers(r).map(o => ({
-      ...o,
-      priceYer: priceInYer(o.priceUsd, pricing?.usdToYer),
-      originalPriceYer: priceInYer(o.originalPriceUsd ?? null, pricing?.usdToYer)
-    }));
+    const offList = offers(r)
+      .filter(o => o.available)
+      .map(o => applyCollectionDiscount(o))
+      .map(o => ({
+        ...o,
+        priceYer: priceInYer(o.priceUsd, pricing?.usdToYer),
+        originalPriceYer: priceInYer(o.originalPriceUsd ?? null, pricing?.usdToYer)
+      }));
     productsMap.get(pId)!.offers.push(...offList);
   }
+
+  const items = [...productsMap.values()].filter(entry => (entry.offers as Sellable[]).length > 0);
 
   return {
     collection: {
@@ -628,7 +682,7 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
       sort: collection.sort,
       updatedAt: collection.updatedAt.toISOString(),
     },
-    items: [...productsMap.values()],
+    items,
     pricing: pricing ? { usdToYer: pricing.usdToYer?.toString() ?? null } : null
   };
 }

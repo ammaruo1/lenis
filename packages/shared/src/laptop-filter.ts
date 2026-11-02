@@ -424,9 +424,18 @@ export function laptopMatchesFilters(
     if (item.specs.ramGB === undefined || !filters.ramGB.includes(item.specs.ramGB)) return false;
   }
 
-  // Storage GB
+  // Storage GB (treat 1000↔1024 and common marketing sizes as equivalent)
   if (skipDimension !== 'storageGB' && filters.storageGB && filters.storageGB.length > 0) {
-    if (item.specs.storageGB === undefined || !filters.storageGB.includes(item.specs.storageGB)) return false;
+    if (item.specs.storageGB === undefined) return false;
+    const actual = item.specs.storageGB;
+    const aliases: Record<number, number[]> = { 256: [240, 250], 512: [480, 500], 1000: [1024], 1024: [1000], 2000: [2048], 2048: [2000] };
+    const matches = filters.storageGB.some(pick => {
+      if (pick === actual) return true;
+      const a = aliases[pick] ?? [];
+      const b = aliases[actual] ?? [];
+      return a.includes(actual) || b.includes(pick);
+    });
+    if (!matches) return false;
   }
 
   // GPU Type (integrated vs dedicated)

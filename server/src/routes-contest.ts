@@ -118,7 +118,7 @@ export async function publicContestRoutes(app: FastifyInstance, db: PrismaClient
     notes: z.string().max(300).optional(),
   });
 
-  app.post('/api/contest/enter', async (req, reply) => {
+  app.post('/api/contest/enter', { config: { rateLimit: { max: 8, timeWindow: '15 minutes' } } }, async (req, reply) => {
     const parsed = EnterSchema.parse(req.body);
     const contest = await ensureDefaultContest(db);
 
@@ -143,26 +143,13 @@ export async function publicContestRoutes(app: FastifyInstance, db: PrismaClient
           phone: cleanedPhone,
         },
       },
-      include: { wonPrize: true },
     });
 
     if (existingByPhone) {
-      // Instead of failing abruptly, return existing ticket gracefully
       return reply.code(200).send({
         ok: true,
         alreadyRegistered: true,
-        message: 'أنت مسجل بالفعل في هذه المسابقة! إليك بيانات تذكرتك الخاصة:',
-        ticket: {
-          id: existingByPhone.id,
-          ticketNumber: existingByPhone.ticketNumber,
-          name: existingByPhone.name,
-          phone: existingByPhone.phone,
-          city: existingByPhone.city,
-          interests: existingByPhone.interests,
-          isWinner: existingByPhone.isWinner,
-          wonPrize: existingByPhone.wonPrize?.title ?? null,
-          createdAt: existingByPhone.createdAt,
-        },
+        message: 'هذا الرقم مسجل مسبقاً في المسابقة. إذا كانت التذكرة لك، راجع الجهاز الذي سجّلت منه.',
       });
     }
 
@@ -173,25 +160,13 @@ export async function publicContestRoutes(app: FastifyInstance, db: PrismaClient
           contestId: contest.id,
           deviceHash: parsed.deviceHash,
         },
-        include: { wonPrize: true },
       });
 
       if (existingByDevice) {
         return reply.code(200).send({
           ok: true,
           alreadyRegistered: true,
-          message: 'تم التسجيل مسبقاً من هذا الجهاز! إليك تذكرتك:',
-          ticket: {
-            id: existingByDevice.id,
-            ticketNumber: existingByDevice.ticketNumber,
-            name: existingByDevice.name,
-            phone: existingByDevice.phone,
-            city: existingByDevice.city,
-            interests: existingByDevice.interests,
-            isWinner: existingByDevice.isWinner,
-            wonPrize: existingByDevice.wonPrize?.title ?? null,
-            createdAt: existingByDevice.createdAt,
-          },
+          message: 'تم التسجيل مسبقاً من هذا الجهاز. احتفظ بالتذكرة التي ظهرت عند التسجيل الأول.',
         });
       }
     }
@@ -231,7 +206,7 @@ export async function publicContestRoutes(app: FastifyInstance, db: PrismaClient
             city: parsed.city,
             firstSource: 'exhibition_contest',
             tags: ['expo-2026', 'contest-entrant', ...parsed.interests],
-            marketingConsent: true,
+            marketingConsent: false,
             consentAt: new Date(),
           },
         });
@@ -301,7 +276,7 @@ export async function publicContestRoutes(app: FastifyInstance, db: PrismaClient
 export async function contestAdminRoutes(admin: FastifyInstance, db: PrismaClient, _config: AppConfig) {
   // Admin overview of contest, participants, and live metrics
   admin.get('/contest/overview', async request => {
-    if (!can(request.auth!.user.role, 'contest.manage') && !can(request.auth!.user.role, 'crm.read')) {
+    if (!can(request.auth!.user.role, 'contest.manage')) {
       throw new ApiError(403, 'forbidden');
     }
 
@@ -353,7 +328,7 @@ export async function contestAdminRoutes(admin: FastifyInstance, db: PrismaClien
   });
 
   admin.post('/contest/draw', async request => {
-    if (!can(request.auth!.user.role, 'contest.manage') && !can(request.auth!.user.role, 'crm.edit')) {
+    if (!can(request.auth!.user.role, 'contest.manage')) {
       throw new ApiError(403, 'forbidden');
     }
 
@@ -382,6 +357,7 @@ export async function contestAdminRoutes(admin: FastifyInstance, db: PrismaClien
       },
     });
 
+    if (prize.winners.length >= prize.quantity) throw new ApiError(409, 'prize_exhausted');
     if (eligibleEntries.length === 0) {
       throw new ApiError(400, 'no_eligible_entrants');
     }
@@ -392,14 +368,16 @@ export async function contestAdminRoutes(admin: FastifyInstance, db: PrismaClien
 
     // Record winner and draw log in transaction
     const winner = await db.$transaction(async tx => {
-      const updated = await tx.contestEntry.update({
-        where: { id: chosen.id },
+      const claimed = await tx.contestEntry.updateMany({
+        where: { id: chosen.id, isWinner: false },
         data: {
           isWinner: true,
           wonPrizeId: prize.id,
           wonAt: new Date(),
         },
       });
+      if (claimed.count !== 1) throw new ApiError(409, 'prize_exhausted');
+      const updated = await tx.contestEntry.findUniqueOrThrow({ where: { id: chosen.id } });
 
       await tx.contestDrawLog.create({
         data: {
@@ -454,7 +432,7 @@ export async function contestAdminRoutes(admin: FastifyInstance, db: PrismaClien
 
   // Confirm prize claim by booth staff
   admin.post('/contest/claim', async request => {
-    if (!can(request.auth!.user.role, 'contest.manage') && !can(request.auth!.user.role, 'crm.edit')) {
+    if (!can(request.auth!.user.role, 'contest.manage')) {
       throw new ApiError(403, 'forbidden');
     }
 

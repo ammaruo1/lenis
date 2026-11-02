@@ -56,6 +56,31 @@ export type StoredCartLine = CartLineInput & {
 };
 
 const LOCAL_CART_KEY = 'alarbi_local_cart_v1';
+export const APPLIED_COUPON_KEY = 'alarbi_applied_coupon_v1';
+
+function lineMergeKey(line: CartLineInput): string {
+  return JSON.stringify([
+    line.variantId ?? null,
+    line.unitId ?? null,
+    line.packageId ?? null,
+    [...(line.unitIds ?? [])].sort(),
+  ]);
+}
+
+function mergeCartLines(existing: StoredCartLine[], incoming: CartLineInput, meta?: CartExtraMeta): StoredCartLine[] {
+  const lines = [...existing];
+  const key = lineMergeKey(incoming);
+  const idx = lines.findIndex((l) => lineMergeKey(l) === key);
+  if (idx >= 0) {
+    const prior = lines[idx];
+    const nextQty =
+      incoming.unitId || incoming.unitIds?.length ? 1 : Math.min(100, prior.quantity + (incoming.quantity || 1));
+    lines[idx] = { ...prior, ...incoming, quantity: nextQty, meta: meta ? { ...prior.meta, ...meta } : prior.meta };
+  } else {
+    lines.push({ ...incoming, quantity: incoming.quantity || 1, meta });
+  }
+  return lines;
+}
 
 export function getLocalCartLines(): StoredCartLine[] {
   if (typeof window === 'undefined') return [];
@@ -71,6 +96,15 @@ export function saveLocalCartLines(lines: StoredCartLine[]): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(lines));
+  } catch {}
+}
+
+/** Replace offline cart cache with the authenticated server cart (after login/register merge). */
+export async function syncCartFromServer(): Promise<void> {
+  try {
+    const preview = await shopApi<Preview>('/cart');
+    saveLocalCartLines(preview.rawLines as StoredCartLine[]);
+    window.dispatchEvent(new Event('store-cart-changed'));
   } catch {}
 }
 
@@ -136,27 +170,14 @@ export function getLocalCartPreview(): Preview {
 }
 
 export async function addCart(line: CartLineInput, meta?: CartExtraMeta) {
-  // 1. Update resilient local storage
-  const lines = getLocalCartLines();
-  const existingIndex = line.packageId
-    ? lines.findIndex((l) => l.packageId === line.packageId)
-    : lines.findIndex((l) => l.variantId === line.variantId && l.unitId === line.unitId);
-
-  if (existingIndex >= 0) {
-    lines[existingIndex].quantity += (line.quantity || 1);
-    if (meta) lines[existingIndex].meta = { ...lines[existingIndex].meta, ...meta };
-  } else {
-    lines.push({ ...line, quantity: line.quantity || 1, meta });
-  }
+  const lines = mergeCartLines(getLocalCartLines(), line, meta);
   saveLocalCartLines(lines);
   window.dispatchEvent(new Event('store-cart-changed'));
 
-  // 2. Synchronize with server if available
   try {
     const cart = await shopApi<Preview>('/cart');
-    if (!(line.unitId && cart.rawLines.some((l) => l.unitId === line.unitId))) {
-      await shopApi('/cart', 'POST', { items: [...cart.rawLines, line] });
-    }
+    const serverLines = mergeCartLines(cart.rawLines, line);
+    await shopApi('/cart', 'POST', { items: serverLines });
   } catch {
     // Graceful offline fallback
   }
@@ -170,7 +191,15 @@ export async function removeCartItem(index: number) {
     window.dispatchEvent(new Event('store-cart-changed'));
   }
   try {
-    await shopApi(`/cart/${index}`, 'DELETE');
+    await shopApi('/cart', 'POST', {
+      items: lines.map((l) => ({
+        variantId: l.variantId,
+        packageId: l.packageId,
+        quantity: l.quantity,
+        unitId: l.unitId,
+        unitIds: l.unitIds,
+      })),
+    });
   } catch {}
 }
 
@@ -183,19 +212,28 @@ export async function updateCartQuantity(index: number, quantity: number) {
   }
   try {
     await shopApi('/cart', 'POST', {
-      items: lines.map((l) => ({ variantId: l.variantId, packageId: l.packageId, quantity: l.quantity, unitId: l.unitId }))
+      items: lines.map((l) => ({
+        variantId: l.variantId,
+        packageId: l.packageId,
+        quantity: l.quantity,
+        unitId: l.unitId,
+        unitIds: l.unitIds,
+      })),
     });
   } catch {}
 }
 
-export function clearCart() {
+export async function clearCart() {
   saveLocalCartLines([]);
   window.dispatchEvent(new Event('store-cart-changed'));
+  try {
+    await shopApi('/cart', 'DELETE');
+  } catch {}
 }
 export const commerceCopy={
   ar:{close:'إغلاق',filterHint:'حدد الفلاتر ثم اعرض النتائج.',from:'ابتداءً من',included:'مشمول في سعر الباقة',shop:'اختر التقنية المناسبة لك',intro:'تصفّح حسب القسم والمواصفات، وأكمل طلبك عبر واتساب من السلة.',search:'ابحث عن جهاز أو موديل أو SKU',all:'كل الأقسام',filters:'الفلاتر',apply:'عرض النتائج',reset:'مسح الكل',brand:'العلامة',condition:'الحالة',collection:'المجموعات',available:'المتوفر فقط',min:'من $',max:'إلى $',newest:'الأحدث',relevance:'الأكثر صلة',priceAsc:'السعر: الأقل أولًا',priceDesc:'السعر: الأعلى أولًا',name:'الاسم',battery:'صحة البطارية',empty:'المنتجات قيد التجهيز',emptyNote:'سيظهر الكتالوج هنا بعد نشر المنتجات من الإدارة.',noResults:'لا توجد نتائج لهذه الاختيارات',results:'منتج',previous:'السابق',next:'التالي',add:'أضف للسلة',choose:'اختر المواصفات',details:'التفاصيل',ask:'اسأل عن السعر',unknown:'السعر يُؤكد بالتواصل',unavailable:'غير متوفر حاليًا',demo:'منتج توضيحي',cart:'السلة',account:'حسابي',quantity:'الكمية',remove:'حذف',subtotal:'مجموع الأصناف المسعّرة',deliveryFee:'رسوم التوصيل تُؤكد بعد التواصل',noReservation:'الطلب لا يحجز المخزون؛ يُؤكد التوفر مع المتجر.',currency:'عملة العرض',pickup:'استلام من المتجر',delivery:'توصيل',address:'عنوان التوصيل',notes:'ملاحظات',checkout:'اعتماد الطلب',loginRequired:'سجّل الدخول لاعتماد الطلب',login:'دخول',register:'إنشاء حساب',fullName:'الاسم',phone:'الهاتف الدولي',password:'كلمة المرور',forgot:'لاستعادة الحساب، تواصل مع المتجر للتحقق من هويتك والحصول على رابط مؤقت.',orders:'طلباتي',logout:'خروج',follow:'متابعة الطلب عبر واتساب',saved:'تم حفظ الطلب',notSent:'فتح واتساب لا يعني إرسال الرسالة. راجعها ثم أرسلها بنفسك.',noWhatsapp:'رقم واتساب لم يُضبط بعد؛ الطلب محفوظ ويمكن متابعته في حسابك.',cancel:'إلغاء الطلب',emptyCart:'سلتك فارغة',continue:'متابعة التسوق',rateMissing:'سعر صرف الريال لم يُضبط بعد',retry:'إعادة المحاولة',loading:'جارٍ التحميل…',unit:'القطعة',inspection:'الفحص',defects:'ملاحظات الحالة',chooseUnit:'اختر القطعة المنفردة',added:'أُضيف إلى السلة',packages:'باقات متكاملة',resetPassword:'تعيين كلمة مرور جديدة',save:'حفظ',stock:'التوفر',cpuFamily:'عائلة المعالج',cpuGen:'الجيل',ram:'الذاكرة (RAM)',storage:'سعة التخزين (SSD)',gpu:'كرت الشاشة',screenSize:'مقاس الشاشة',touch:'شاشة لمس',performance:'الأعلى أداءً',highestRam:'الأكبر ذاكرة',laptopsSection:'قسم اللابتوبات',laptopsIntro:'فلترة فائقة الذكاء بحسب معمارية المعالج، الذاكرة، التخزين، وكرت الشاشة.'},
   en:{close:'Close',filterHint:'Choose filters, then show results.',from:'From',included:'Included in bundle price',shop:'Find the right technology',intro:'Browse by section and specs. Follow your order on WhatsApp from your cart.',search:'Search device, model or SKU',all:'All categories',filters:'Filters',apply:'Show results',reset:'Clear all',brand:'Brand',condition:'Condition',collection:'Collections',available:'Available only',min:'From $',max:'To $',newest:'Newest',relevance:'Most relevant',priceAsc:'Price: low to high',priceDesc:'Price: high to low',name:'Name',battery:'Battery health',empty:'Products are being prepared',emptyNote:'The catalog will appear here when products are published.',noResults:'No results for these filters',results:'products',previous:'Previous',next:'Next',add:'Add to cart',choose:'Choose options',details:'Details',ask:'Ask for price',unknown:'Price confirmed by the store',unavailable:'Currently unavailable',demo:'Illustrative product',cart:'Cart',account:'My account',quantity:'Quantity',remove:'Remove',subtotal:'Subtotal of priced items',deliveryFee:'Delivery fee confirmed after contact',noReservation:'Orders do not reserve stock. Availability is confirmed with the store.',currency:'Display currency',pickup:'Store pickup',delivery:'Delivery',address:'Delivery address',notes:'Notes',checkout:'Confirm order',loginRequired:'Sign in to confirm your order',login:'Sign in',register:'Create account',fullName:'Name',phone:'International phone',password:'Password',forgot:'Contact the store for identity verification and a temporary recovery link.',orders:'My orders',logout:'Sign out',follow:'Follow order on WhatsApp',saved:'Order saved',notSent:'Opening WhatsApp does not send a message. Review it and send it yourself.',noWhatsapp:'WhatsApp is not configured yet. Your order is saved in your account.',cancel:'Cancel order',emptyCart:'Your cart is empty',continue:'Continue shopping',rateMissing:'YER exchange rate is not configured',retry:'Retry',loading:'Loading…',unit:'Unit',inspection:'Inspection',defects:'Condition notes',chooseUnit:'Choose an individual unit',added:'Added to cart',packages:'Complete bundles',resetPassword:'Set a new password',save:'Save',stock:'Availability',cpuFamily:'Processor Family',cpuGen:'Generation',ram:'Memory (RAM)',storage:'Storage (SSD)',gpu:'Graphics',screenSize:'Screen Size',touch:'Touchscreen',performance:'Performance',highestRam:'Highest RAM',laptopsSection:'Laptops Section',laptopsIntro:'High-precision filtering by processor architecture, RAM, storage, and graphics tier.'}
 };
 export const orderLabels={ar:{new:'جديد',review:'قيد المراجعة',confirmed:'مؤكد',preparing:'قيد التجهيز',ready_pickup:'جاهز للاستلام',out_delivery:'خرج للتوصيل',completed:'مكتمل',cancelled:'ملغى'},en:{new:'New',review:'Under review',confirmed:'Confirmed',preparing:'Preparing',ready_pickup:'Ready for pickup',out_delivery:'Out for delivery',completed:'Completed',cancelled:'Cancelled'}};
-export const errorLabels:Record<string,Localized>={service_not_configured:{ar:'خدمة الحسابات والسلة غير جاهزة على الاستضافة. يرجى المحاولة لاحقًا.',en:'Account and cart services are not configured on the hosting server. Please try later.'},insufficient_stock:{ar:'بعض الأصناف لم تعد متوفرة بهذه الكمية. عدّل السلة.',en:'Some items are unavailable in this quantity. Update your cart.'},prices_changed:{ar:'تغيرت الأسعار أو سعر الصرف. راجع المبالغ الجديدة واعتمد الطلب مجددًا.',en:'Prices or the exchange rate changed. Review and confirm again.'},invalid_credentials:{ar:'الهاتف أو كلمة المرور غير صحيحة.',en:'Incorrect phone or password.'},already_exists:{ar:'هذا الهاتف مسجل مسبقًا.',en:'This phone is already registered.'},item_unavailable:{ar:'أحد الأصناف لم يعد متاحًا. احذفه من السلة.',en:'An item is no longer available. Remove it from the cart.'},unauthenticated:{ar:'سجّل الدخول للمتابعة.',en:'Sign in to continue.'},rate_limited:{ar:'محاولات كثيرة. انتظر ثم حاول.',en:'Too many attempts. Please wait.'},validation_failed:{ar:'راجع الحقول المدخلة.',en:'Please check the fields.'},reset_expired:{ar:'رابط الاستعادة انتهى أو استُخدم.',en:'Recovery link expired or already used.'}};
+export const errorLabels:Record<string,Localized>={service_not_configured:{ar:'خدمة الحسابات والسلة غير جاهزة على الاستضافة. يرجى المحاولة لاحقًا.',en:'Account and cart services are not configured on the hosting server. Please try later.'},insufficient_stock:{ar:'بعض الأصناف لم تعد متوفرة بهذه الكمية. عدّل السلة.',en:'Some items are unavailable in this quantity. Update your cart.'},prices_changed:{ar:'تغيرت الأسعار أو سعر الصرف. راجع المبالغ الجديدة واعتمد الطلب مجددًا.',en:'Prices or the exchange rate changed. Review and confirm again.'},invalid_credentials:{ar:'الهاتف أو كلمة المرور غير صحيحة.',en:'Incorrect phone or password.'},already_exists:{ar:'هذا الهاتف مسجل مسبقًا.',en:'This phone is already registered.'},item_unavailable:{ar:'أحد الأصناف لم يعد متاحًا. احذفه من السلة.',en:'An item is no longer available. Remove it from the cart.'},unauthenticated:{ar:'سجّل الدخول للمتابعة.',en:'Sign in to continue.'},rate_limited:{ar:'محاولات كثيرة. انتظر ثم حاول.',en:'Too many attempts. Please wait.'},unpriced_items:{ar:'لا يمكن اعتماد طلب فيه منتج بلا سعر. أزله من السلة أو اطلب السعر عبر واتساب.',en:'An order cannot include an item without a price. Remove it or ask for the price on WhatsApp.'},coupon_invalid:{ar:'الكوبون لم يعد صالحاً لهذا الطلب.',en:'This coupon is no longer valid for this order.'},validation_failed:{ar:'راجع الحقول المدخلة.',en:'Please check the fields.'},reset_expired:{ar:'رابط الاستعادة انتهى أو استُخدم.',en:'Recovery link expired or already used.'}};
 export function errorText(code:string,lang:'ar'|'en'){return errorLabels[code]?.[lang]??(lang==='ar'?'تعذّر إكمال العملية. أعد المحاولة.':'Could not complete this action. Please try again.');}

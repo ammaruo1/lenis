@@ -27,6 +27,7 @@ import { trackWhatsappClick } from '@/analytics';
 import {
   shopApi,
   getLocalCartPreview,
+  APPLIED_COUPON_KEY,
   removeCartItem,
   updateCartQuantity,
   clearCart,
@@ -76,9 +77,14 @@ export default function CartPage() {
     { code: string; title: { ar: string; en: string }; discountType: string; discountValue: number }[]
   >([]);
 
-  const loadCart = async () => {
+  const loadCart = async (couponCode?: string | null) => {
     try {
-      const res = await shopApi<Preview>('/cart');
+      const stored =
+        couponCode ??
+        appliedCoupon?.code ??
+        (typeof window !== 'undefined' ? sessionStorage.getItem(APPLIED_COUPON_KEY) : null);
+      const path = stored ? `/cart?coupon=${encodeURIComponent(stored)}` : '/cart';
+      const res = await shopApi<Preview>(path);
       setCart(res);
       setError('');
     } catch {
@@ -128,8 +134,9 @@ export default function CartPage() {
 
   const handleClearCart = () => {
     if (window.confirm(ar ? 'هل ترغب في إفراغ كافة محتويات السلة؟' : 'Are you sure you want to clear your cart?')) {
-      clearCart();
-      void loadCart();
+      setAppliedCoupon(null);
+      sessionStorage.removeItem(APPLIED_COUPON_KEY);
+      void clearCart().then(() => loadCart());
     }
   };
 
@@ -161,6 +168,7 @@ export default function CartPage() {
           isError: false,
         });
         setCouponInput(res.coupon.code);
+        sessionStorage.setItem(APPLIED_COUPON_KEY, code);
         try {
           const updated = await shopApi<Preview>(`/cart?coupon=${encodeURIComponent(code)}`);
           setCart(updated);
@@ -189,18 +197,41 @@ export default function CartPage() {
     setAppliedCoupon(null);
     setCouponInput('');
     setCouponMsg(null);
-    await loadCart();
+    sessionStorage.removeItem(APPLIED_COUPON_KEY);
+    await loadCart(null);
   };
 
-  // Pricing & Discounts
+  useEffect(() => {
+    const saved = sessionStorage.getItem(APPLIED_COUPON_KEY);
+    if (saved && !appliedCoupon) {
+      void handleApplyCoupon(undefined, saved);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restore once on mount
+  }, []);
+
+  // Pricing & Discounts (prefer server preview totals when a coupon is active)
   const subtotalUsdNum = cart?.subtotalUsd ? parseFloat(cart.subtotalUsd) : 0;
-  const discountUsd = appliedCoupon?.discountUsd !== undefined ? appliedCoupon.discountUsd : 0;
-  const finalTotalUsd = Math.max(0, subtotalUsdNum - discountUsd);
-  const finalTotalUsdStr = subtotalUsdNum > 0 ? finalTotalUsd.toFixed(2) : (cart?.subtotalUsd || '0.00');
+  const serverDiscount = cart?.discountUsd ? parseFloat(cart.discountUsd) : 0;
+  const discountUsd =
+    appliedCoupon && cart?.totalUsd && serverDiscount > 0
+      ? serverDiscount
+      : appliedCoupon?.discountUsd !== undefined
+        ? appliedCoupon.discountUsd
+        : 0;
+  const finalTotalUsdStr =
+    appliedCoupon && cart?.totalUsd
+      ? cart.totalUsd
+      : subtotalUsdNum > 0
+        ? Math.max(0, subtotalUsdNum - discountUsd).toFixed(2)
+        : cart?.subtotalUsd || '0.00';
 
   const activeExchangeRate = cart?.usdToYer ? parseFloat(cart.usdToYer) : exchangeRate;
-  const subtotalYerCalc = subtotalUsdNum > 0 ? calculateYer(subtotalUsdNum, activeExchangeRate) : null;
-  const finalTotalYerCalc = appliedCoupon?.totalYer ? Math.round(Number(appliedCoupon.totalYer)) : (finalTotalUsd > 0 ? calculateYer(finalTotalUsd, activeExchangeRate) : null);
+  const finalTotalYerCalc =
+    appliedCoupon && cart?.totalYer
+      ? Number(cart.totalYer)
+      : finalTotalUsdStr && parseFloat(finalTotalUsdStr) > 0
+        ? calculateYer(parseFloat(finalTotalUsdStr), activeExchangeRate)
+        : null;
 
   const whatsappPhone = site?.whatsapp || '967771001044';
 
@@ -259,23 +290,32 @@ export default function CartPage() {
       navigate(`/${language}/account?return=cart`);
       return;
     }
-    if (!cart?.previewToken) return;
-
     setBusy(true);
     setError('');
     try {
+      const couponCode = appliedCoupon?.code;
+      const fresh = await shopApi<Preview>(
+        couponCode ? `/cart?coupon=${encodeURIComponent(couponCode)}` : '/cart'
+      );
+      setCart(fresh);
+      if (!fresh.previewToken || fresh.errors?.length) {
+        setError(errorText(fresh.errors?.[0] ?? 'validation_failed', language));
+        return;
+      }
+
       const combinedNotes = [
         notes.trim(),
         appliedCoupon ? `[كوبون: ${appliedCoupon.code} - ${appliedCoupon.label}]` : null
       ].filter(Boolean).join(' | ');
 
       const order = await shopApi<Order>('/orders', 'POST', {
-        previewToken: cart.previewToken,
+        previewToken: fresh.previewToken,
         idempotencyKey: idempotencyKey.current,
         currency,
         fulfillment: { method, address, notes: combinedNotes },
         couponCode: appliedCoupon ? appliedCoupon.code : undefined,
       });
+      sessionStorage.removeItem(APPLIED_COUPON_KEY);
       window.dispatchEvent(new Event('store-cart-changed'));
       navigate(`/${language}/orders/${order.id}`);
     } catch (e) {
