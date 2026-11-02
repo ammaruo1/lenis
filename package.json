@@ -38,6 +38,7 @@
     "start:local": "node scripts/admin/serve-local.mjs",
     "deploy:check": "npm run security:check && npm run lint && npm run typecheck && npm run test && npm run build",
     "deploy:package": "npm run deploy:check && node scripts/admin/package-hostinger.mjs",
+    "deploy:hostinger": "node scripts/admin/deploy-hostinger-api.mjs",
     "db:import": "tsx server/src/import-catalog.ts",
     "db:backup": "tsx server/src/backup.ts backup",
     "db:backup:full": "node scripts/backup-full.mjs",
