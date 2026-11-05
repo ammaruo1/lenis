@@ -66,6 +66,8 @@ export default defineConfig(({ command }) => {
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Untracked ./lenis fork must not shadow the npm package.
+      lenis: path.resolve(__dirname, 'node_modules/lenis'),
     },
   },
   build: {

@@ -15,6 +15,15 @@ import {couponToDto} from './coupon-service.js';
 import {randomToken,hashToken} from './security.js';
 import {productInclude,productDto} from './catalog-service.js';
 import {fetchAmazonImages,importAmazonImagesToStore} from './amazon-service.js';
+import {
+  executeClearDiscounts,
+  persistPricingRule,
+  restorePricesFromBulkHistory,
+  revertPricingRule,
+  snapshotVariant,
+  type VariantPriceSnapshot
+} from './pricing-adjustment-rules.js';
+import {hasStoreDiscount, resolveSalePriceUsd, resolveStoreDiscountPercent, resolveStoreOriginalPriceUsd} from './sale-pricing.js';
 const catalog={permission:'catalog.edit' as const},inventory={permission:'inventory.manage' as const},orders={permission:'orders.manage' as const},coupons={permission:'orders.manage' as const};
 const revision=(row:{updatedAt:Date}|null,value?:string)=>{if(row&&value!==undefined&&row.updatedAt.toISOString()!==value)throw new ApiError(409,'content_changed');};
 export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,config:AppConfig){
@@ -347,46 +356,48 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
     return {token,expiresInMinutes:30};
   });
   app.get('/commerce/pricing',{config:{permission:'prices.edit'}},async()=>{
-    const configRow=await db.pricingConfig.findUnique({where:{id:1}});
-    // استعلام محدد بحد أقصى (500) لمنع استنزاف الذاكرة
-    // Bounded product query with limit (take: 500) to prevent unbounded memory usage
-    const products=await db.product.findMany({
-      where:{deletedAt:null},
-      take:500,
-      include:{
-        brand:{select:{id:true,name:true}},
-        images:{take:1,include:{media:{select:{originalPath:true}}}},
-        variants:{where:{active:true},include:{units:{select:{available:true}}}}
-      },
-      orderBy:{updatedAt:'desc'}
-    });
+    const productWhere={deletedAt:null};
+    const variantWhere={active:true,product:productWhere};
+    const [configRow,products,totalProducts,totalVariantsDb,negotiableCount,storeDiscountRows]=await Promise.all([
+      db.pricingConfig.findUnique({where:{id:1}}),
+      db.product.findMany({
+        where:productWhere,
+        include:{
+          brand:{select:{id:true,name:true}},
+          images:{take:1,include:{media:{select:{originalPath:true}}}},
+          variants:{where:{active:true},include:{units:{select:{available:true}}}}
+        },
+        orderBy:{updatedAt:'desc'}
+      }),
+      db.product.count({where:productWhere}),
+      db.productVariant.count({where:variantWhere}),
+      db.product.count({where:{...productWhere,negotiable:true}}),
+      db.productVariant.findMany({
+        where:{
+          active:true,
+          product:{deletedAt:null,status:'published',brand:{published:true}}
+        },
+        select:{
+          priceUsd:true,
+          originalPriceUsd:true,
+          product:{select:{priceUsd:true,originalPriceUsd:true}}
+        }
+      })
+    ]);
     const rate=configRow?.usdToYer?Number(configRow.usdToYer):null;
-    let pricedCount=0,unpricedCount=0,negotiableCount=0;
+    const discountedInStoreCount=storeDiscountRows.filter(v=>hasStoreDiscount(v,v.product)).length;
+    let pricedCount=0,unpricedCount=0;
     const items=products.flatMap(p=>{
       const prodImg=p.images[0]?.media?.originalPath??null;
-      if(p.negotiable)negotiableCount++;
       return p.variants.map(v=>{
-        const vPrice=v.priceUsd!==null?Number(v.priceUsd):(p.priceUsd!==null?Number(p.priceUsd):null);
+        const saleStr=resolveSalePriceUsd(v,p);
+        const vPrice=saleStr!==null?Number(saleStr):null;
         if(vPrice!==null&&vPrice>0)pricedCount++;else unpricedCount++;
         const priceYer=vPrice!==null&&rate?Math.round(vPrice*rate):null;
         const availableUnits=v.units?.filter(u=>u.available).length??0;
-        // قراءة originalPriceUsd من العمود الحقيقي أولاً، ثم fallback لـ specs (JSON)
-        // Read originalPriceUsd from real column first, then fallback to specs JSON
-        let origUsd:number|null=null;
-        if(v.originalPriceUsd!==null&&v.originalPriceUsd!==undefined){
-          origUsd=Number(v.originalPriceUsd);
-        }else if(p.originalPriceUsd!==null&&p.originalPriceUsd!==undefined){
-          origUsd=Number(p.originalPriceUsd);
-        }else{
-          const vSpecs=(v.specs||{}) as Record<string,unknown>;
-          const pSpecs=(p.specs||{}) as Record<string,unknown>;
-          const specOrig=vSpecs.originalPriceUsd??pSpecs.originalPriceUsd;
-          if(specOrig&&!isNaN(Number(specOrig)))origUsd=Number(specOrig);
-        }
-        const discountPct:number|null=
-          v.discountPercent!==null&&v.discountPercent!==undefined?Number(v.discountPercent):
-          p.discountPercent!==null&&p.discountPercent!==undefined?Number(p.discountPercent):
-          (origUsd&&vPrice&&origUsd>vPrice)?Math.round(((origUsd-vPrice)/origUsd)*100):null;
+        const origStr=resolveStoreOriginalPriceUsd(v,p);
+        const origUsd=origStr!==null?Number(origStr):null;
+        const discountPct=resolveStoreDiscountPercent(v,p);
         const origYer=origUsd&&rate?Math.round(origUsd*rate):null;
         return {
           productId:p.id,
@@ -400,8 +411,8 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
           inventoryMode:v.inventoryMode,
           quantity:v.quantity,
           availableUnits,
-          priceUsd:vPrice!==null?String(vPrice):null,
-          originalPriceUsd:origUsd!==null?String(origUsd):null,
+          priceUsd:saleStr,
+          originalPriceUsd:origStr,
           priceYer,
           originalPriceYer:origYer,
           discountPercent:discountPct,
@@ -416,11 +427,13 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
       whatsapp:configRow?.whatsapp??null,
       updatedAt:configRow?.updatedAt?.toISOString()??null,
       stats:{
-        totalProducts:products.length,
-        totalVariants:items.length,
+        totalProducts,
+        totalVariants:totalVariantsDb,
         pricedCount,
         unpricedCount,
-        negotiableCount
+        negotiableCount,
+        discountedInStoreCount,
+        loadedVariants:items.length
       },
       items
     };
@@ -536,45 +549,22 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
         negotiable:z.boolean().optional()
       })).optional()
     }).parse(request.body);
-    return transaction(db,async tx=>{
+    const result=await transaction(db,async tx=>{
       let updatedCount=0;
       const userId=request.auth!.user.id;
+      const ruleSnapshots:VariantPriceSnapshot[]=[];
+      const trackRule=['clear_discounts','adjust_price','apply_discount','set_fixed','adjust_percent'].includes(input.action);
 
       // ─── مسح كل الخصومات ─── (clear_discounts)
       if(input.action==='clear_discounts'){
-        const where:Prisma.ProductVariantWhereInput={
-          active:true,
-          ...(input.variantIds?.length?{id:{in:input.variantIds}}:{}),
-          ...(input.category&&input.category!=='all'?{product:{category:input.category}}:{})
-        };
-        const variants=await tx.productVariant.findMany({where,include:{product:true}});
-        // تجميع المتغيرات حسب المنتج لتحديث المنتج مرة واحدة فقط
-        const productIds=new Set<string>();
-        await Promise.all(variants.map(async v=>{
-          const vSpecs=(v.specs||{}) as Record<string,unknown>;
-          const cleanSpecs={...vSpecs};
-          delete cleanSpecs.originalPriceUsd;
-          await tx.productVariant.update({
-            where:{id:v.id},
-            data:{originalPriceUsd:null,discountPercent:null,specs:cleanSpecs as Prisma.InputJsonValue}
-          });
-          productIds.add(v.productId);
-          updatedCount++;
-        }));
-        // تحديث جدول Product لكل منتج متأثر
-        await Promise.all(Array.from(productIds).map(async pid=>{
-          const prod=variants.find(v=>v.productId===pid)?.product;
-          if(!prod)return;
-          const pSpecs=(prod.specs||{}) as Record<string,unknown>;
-          const cleanProdSpecs={...pSpecs};
-          delete cleanProdSpecs.originalPriceUsd;
-          await tx.product.update({
-            where:{id:pid},
-            data:{originalPriceUsd:null,discountPercent:null,specs:cleanProdSpecs as Prisma.InputJsonValue}
-          });
-        }));
-        // تسجيل في PriceHistory
-        await Promise.all(Array.from(productIds).map(pid=>
+        const cleared=await executeClearDiscounts(
+          tx,
+          {category:input.category,variantIds:input.variantIds},
+          trackRule,
+          ruleSnapshots
+        );
+        updatedCount=cleared.updatedCount;
+        await Promise.all(cleared.productIds.map(pid=>
           tx.priceHistory.create({data:{productId:pid,changedBy:userId,reason:'clear_discounts',changeType:'discount'}})
         ));
 
@@ -595,6 +585,7 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
         const variants=await tx.productVariant.findMany({where,include:{product:true}});
         await Promise.all(variants.map(async v=>{
           if(!v.priceUsd)return;
+          if(trackRule)ruleSnapshots.push(snapshotVariant(v));
           const oldPrice=Number(v.priceUsd);
           let newPrice:number;
           if(typeof input.percent==='number'&&input.percent!==0){
@@ -641,6 +632,7 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
         const variants=await tx.productVariant.findMany({where,include:{product:true}});
         await Promise.all(variants.map(async v=>{
           if(!v.priceUsd)return;
+          if(trackRule)ruleSnapshots.push(snapshotVariant(v));
           const currentPrice=Number(v.priceUsd);
           // السعر الحالي يصبح السعر الأصلي إذا لم يكن هناك سعر أصلي مسبق
           const existingOrig=v.originalPriceUsd?Number(v.originalPriceUsd):null;
@@ -689,6 +681,7 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
         const variants=await tx.productVariant.findMany({where,include:{product:true}});
         await Promise.all(variants.map(async v=>{
           if(!v.priceUsd)return;
+          if(trackRule)ruleSnapshots.push(snapshotVariant(v));
           const newPrice=new Prisma.Decimal((Number(v.priceUsd)*factor).toFixed(2));
           const origUsd=v.originalPriceUsd?Number(v.originalPriceUsd):null;
           const newDiscount=origUsd&&Number(origUsd)>Number(newPrice)?new Prisma.Decimal(((origUsd-Number(newPrice))/origUsd*100).toFixed(2)):null;
@@ -715,6 +708,7 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
         if(!ids.length)throw new ApiError(400,'variant_ids_required');
         const variants=await tx.productVariant.findMany({where:{id:{in:ids}},include:{product:true}});
         await Promise.all(variants.map(async v=>{
+          if(trackRule)ruleSnapshots.push(snapshotVariant(v));
           const origUsd=v.originalPriceUsd?Number(v.originalPriceUsd):null;
           const newDiscount=origUsd&&origUsd>input.fixedPrice!?new Prisma.Decimal(((origUsd-input.fixedPrice!)/origUsd*100).toFixed(2)):null;
           await Promise.all([
@@ -837,9 +831,69 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
         }
       }
 
+      if(trackRule&&ruleSnapshots.length){
+        const ruleParams:Record<string,unknown>={
+          category:input.category,
+          priceMin:input.priceMin,
+          priceMax:input.priceMax,
+          percent:input.percent,
+          fixedAmount:input.fixedAmount,
+          fixedPrice:input.fixedPrice,
+          variantCount:input.variantIds?.length??0
+        };
+        await persistPricingRule(tx,userId,input.action,ruleParams,ruleSnapshots);
+      }
+
       await audit(tx,config,request,{action:'pricing.batch_updated',entity:'PricingConfig',entityId:'1',after:{action:input.action,updatedCount}});
       return {ok:true,updatedCount};
     });
+    invalidateCatalogCache();
+    return result;
+  });
+
+  app.get('/commerce/pricing/rules',{config:{permission:'prices.edit'}},async request=>{
+    const q=z.object({
+      page:z.coerce.number().int().positive().default(1),
+      pageSize:z.coerce.number().int().positive().max(100).default(20),
+      includeReverted:z.coerce.boolean().optional().default(false)
+    }).parse(request.query);
+    const where:Prisma.PriceAdjustmentRuleWhereInput=q.includeReverted?{}:{revertedAt:null};
+    const [total,items]=await Promise.all([
+      db.priceAdjustmentRule.count({where}),
+      db.priceAdjustmentRule.findMany({
+        where,
+        include:{user:{select:{name:true,role:true}}},
+        orderBy:{createdAt:'desc'},
+        skip:(q.page-1)*q.pageSize,
+        take:q.pageSize
+      })
+    ]);
+    return {total,page:q.page,pageSize:q.pageSize,items};
+  });
+
+  app.delete('/commerce/pricing/rules/:id',{config:{permission:'prices.edit'}},async request=>{
+    const {id}=z.object({id:z.string().uuid()}).parse(request.params);
+    try{
+      const restoredCount=await transaction(db,async tx=>
+        revertPricingRule(tx,db,id)
+      );
+      await audit(db,config,request,{action:'pricing.rule_reverted',entity:'PriceAdjustmentRule',entityId:id,after:{restoredCount}});
+      return {ok:true,restoredCount};
+    }catch(error){
+      const msg=error instanceof Error?error.message:'failed';
+      if(msg==='not_found')throw new ApiError(404,'not_found');
+      if(msg==='already_reverted')throw new ApiError(409,'already_reverted');
+      if(msg==='revert_newer_first')throw new ApiError(409,'revert_newer_first');
+      throw error;
+    }
+  });
+
+  app.post('/commerce/pricing/restore-pre-bulk',{config:{permission:'prices.edit'}},async request=>{
+    const updatedCount=await transaction(db,async tx=>
+      restorePricesFromBulkHistory(tx,request.auth!.user.id)
+    );
+    await audit(db,config,request,{action:'pricing.restore_pre_bulk',entity:'PricingConfig',entityId:'1',after:{updatedCount}});
+    return {ok:true,updatedCount};
   });
 
   // ─── سجل تاريخ الأسعار ─── GET /commerce/pricing/history

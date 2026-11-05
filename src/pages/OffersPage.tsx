@@ -81,10 +81,31 @@ type DealProductItem = {
   yerPrice: number | null;
   originalYer: number | null;
   inStock: boolean;
-  limitedStock: boolean;
-  dealEndsInDays: number;
   variantId?: string;
 };
+
+/** Offer with a real catalog discount (original price strictly above sale price). */
+function pickDiscountedOffer(offers: Offer[] | undefined): Offer | null {
+  if (!offers?.length) return null;
+  let best: Offer | null = null;
+  let bestPct = 0;
+  for (const o of offers) {
+    if (o.available === false || o.priceUsd == null) continue;
+    const price = Number(o.priceUsd);
+    const orig = o.originalPriceUsd != null ? Number(o.originalPriceUsd) : NaN;
+    if (!Number.isFinite(price) || !Number.isFinite(orig) || orig <= price) continue;
+    const pct =
+      o.discountPercent != null && o.discountPercent > 0
+        ? Math.round(o.discountPercent)
+        : Math.round(((orig - price) / orig) * 100);
+    if (pct <= 0) continue;
+    if (!best || pct > bestPct) {
+      best = o;
+      bestPct = pct;
+    }
+  }
+  return best;
+}
 
 // ── Live Countdown Timer ──────────────────────────────────────────
 function MiniCountdown({ endsAt, compact = false }: { endsAt: string; compact?: boolean }) {
@@ -129,46 +150,6 @@ function MiniCountdown({ endsAt, compact = false }: { endsAt: string; compact?: 
         {d > 0 ? `${d}d ` : ''}
         {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
       </span>
-    </div>
-  );
-}
-
-// ── Hero Mega Countdown ───────────────────────────────────────────
-function HeroFlashCountdown({ targetDate }: { targetDate: string }) {
-  const { language } = useLanguage();
-  const ar = language === 'ar';
-  const [diff, setDiff] = useState(new Date(targetDate).getTime() - Date.now());
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setDiff(new Date(targetDate).getTime() - Date.now());
-    }, 1000);
-    return () => clearInterval(id);
-  }, [targetDate]);
-
-  const clamped = Math.max(0, diff);
-  const d = Math.floor(clamped / 86400000);
-  const h = Math.floor((clamped % 86400000) / 3600000);
-  const m = Math.floor((clamped % 3600000) / 60000);
-  const s = Math.floor((clamped % 60000) / 1000);
-
-  const units = [
-    { label: ar ? 'يوم' : 'Days', value: d },
-    { label: ar ? 'ساعة' : 'Hours', value: h },
-    { label: ar ? 'دقيقة' : 'Mins', value: m },
-    { label: ar ? 'ثانية' : 'Secs', value: s },
-  ];
-
-  return (
-    <div className="flex items-center gap-2 sm:gap-3" dir="ltr">
-      {units.map((u, i) => (
-        <div key={i} className="flex flex-col items-center">
-          <div className="w-13 h-13 sm:w-16 sm:h-16 flex items-center justify-center rounded-2xl bg-white/10 dark:bg-black/40 backdrop-blur-md border border-white/20 text-white font-mono font-black text-xl sm:text-2xl shadow-inner">
-            {String(u.value).padStart(2, '0')}
-          </div>
-          <span className="text-[10px] sm:text-xs text-purple-200 mt-1 font-medium">{u.label}</span>
-        </div>
-      ))}
     </div>
   );
 }
@@ -248,141 +229,37 @@ export default function OffersPage() {
     };
   }, []);
 
-  // Curated Fallback Collections if API returned none or offline
-  const fallbackCollections: PublishedCollectionItem[] = useMemo(() => {
-    const nextWeek = new Date(Date.now() + 4 * 86400000).toISOString();
-    const nextTwoWeeks = new Date(Date.now() + 11 * 86400000).toISOString();
-
-    return [
-      {
-        id: 'fallback-col-thinkpad',
-        slug: 'thinkpad-business-clearance',
-        title: {
-          ar: 'تصفية لابتوبات الأعمال ThinkPad & Latitude',
-          en: 'ThinkPad & Latitude Business Clearance',
-        },
-        description: {
-          ar: 'أقوى أجهزة الفئة الاحترافية المعتمدة للبرمجة والأعمال المكتبية المتواصلة بهياكل فائقة المتانة وضمان فحص معتمد.',
-          en: 'Certified enterprise laptops for coding and corporate workflows with ultra-rugged builds and verified warranty.',
-        },
-        rules: {
-          endsAt: nextWeek,
-          badge: ar ? 'تصفية حصرية' : 'Exclusive Clearance',
-          accentColor: '#3b82f6',
-          discountPct: 25,
-          pinned: true,
-        },
-        mode: 'manual',
-        productCount: 8,
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: 'fallback-col-students',
-        slug: 'student-tech-essentials',
-        title: {
-          ar: 'عروض الطلاب والتعليم الذكي',
-          en: 'Student & Academic Tech Deals',
-        },
-        description: {
-          ar: 'أجهزة خفيفة الوزن بأداء سريع وبطاريات ممتازة مع تخزين NVMe فائق السرعة تناسب الدراسة الجامعية والبحوث.',
-          en: 'Ultralight laptops with snappy NVMe storage and long battery life engineered for academic excellence.',
-        },
-        rules: {
-          endsAt: nextTwoWeeks,
-          badge: ar ? 'عرض التعليم' : 'Academic Special',
-          accentColor: '#10b981',
-          discountPct: 20,
-          pinned: false,
-        },
-        mode: 'manual',
-        productCount: 6,
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: 'fallback-col-workstations',
-        slug: 'smart-desk-productivity',
-        title: {
-          ar: 'تجهيزات المكاتب ومحطات العمل 2K',
-          en: 'Smart Desk & 2K Workstations',
-        },
-        description: {
-          ar: 'حزم متكاملة تجمع بين لابتوبات الأعمال وشاشات ديل ألترا شارب مع وحدات طاقة APC UPS لضمان استمرارية العمل دون انقطاع.',
-          en: 'Curated setups combining business laptops, Dell UltraSharp monitors, and APC UPS backups for zero downtime.',
-        },
-        rules: {
-          endsAt: null,
-          badge: ar ? 'الأكثر طلباً' : 'Best Seller',
-          accentColor: '#8b5cf6',
-          discountPct: 15,
-          pinned: false,
-        },
-        mode: 'manual',
-        productCount: 5,
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: 'fallback-col-creators',
-        slug: 'creators-and-gaming-rigs',
-        title: {
-          ar: 'أجهزة صناع المحتوى والتصميم الاحترافي',
-          en: 'Content Creators & Power Rigs',
-        },
-        description: {
-          ar: 'أجهزة مزودة بمعالجات قوية وكرت شاشة مستقل وشاشات ذات دقة ألوان عالية لتشغيل برامج المونتاج والتصميم بسلاسة.',
-          en: 'Dedicated GPU powerhouses with high-accuracy displays tailored for video editing and 3D rendering.',
-        },
-        rules: {
-          endsAt: nextWeek,
-          badge: ar ? 'أداء فائق' : 'Max Performance',
-          accentColor: '#f97316',
-          discountPct: 30,
-          pinned: false,
-        },
-        mode: 'manual',
-        productCount: 7,
-        updatedAt: new Date().toISOString(),
-      },
-    ];
-  }, [ar]);
-
-  const activeCollections = collections.length > 0 ? collections : fallbackCollections;
-
-  // Curated Discounted Products list for Offers Showcase
+  // Products with a real discount from shop catalog API (originalPriceUsd > priceUsd)
   const discountedProducts = useMemo(() => {
-    // 1. Convert live catalog items if available
-    const liveConverted: DealProductItem[] = catalogApiItems.map((item, idx) => {
+    const items: DealProductItem[] = [];
+    for (const item of catalogApiItems) {
+      const bestOffer = pickDiscountedOffer(item.offers);
+      if (!bestOffer?.priceUsd || !bestOffer.originalPriceUsd) continue;
+
       const p = item.product;
-      const bestOffer = item.offers?.[0];
-      const category = p.category || 'laptops';
-
-      let dealPriceUsd = bestOffer?.priceUsd ? Number(bestOffer.priceUsd) : null;
-      let originalPriceUsd = bestOffer?.originalPriceUsd ? Number(bestOffer.originalPriceUsd) : null;
-      const discountPct = bestOffer?.discountPercent ? Number(bestOffer.discountPercent) : 20;
-
-      if (!dealPriceUsd || dealPriceUsd <= 0) {
-        if (category === 'hard-drives' || category === 'storage') {
-          dealPriceUsd = [35, 48, 65, 29, 58][idx % 5];
-        } else if (category === 'displays') {
-          dealPriceUsd = [165, 195, 240, 150][idx % 4];
-        } else {
-          dealPriceUsd = [320, 390, 480, 520, 295][idx % 5];
-        }
-      }
-      if (!originalPriceUsd || originalPriceUsd <= dealPriceUsd) {
-        originalPriceUsd = Math.round(dealPriceUsd / (1 - discountPct / 100));
+      const dealPriceUsd = Number(bestOffer.priceUsd);
+      const originalPriceUsd = Number(bestOffer.originalPriceUsd);
+      if (!Number.isFinite(dealPriceUsd) || !Number.isFinite(originalPriceUsd) || originalPriceUsd <= dealPriceUsd) {
+        continue;
       }
 
-      const yerPrice = calculateYer(dealPriceUsd, exchangeRate);
-      const originalYer = calculateYer(originalPriceUsd, exchangeRate);
+      const discountPct =
+        bestOffer.discountPercent != null && bestOffer.discountPercent > 0
+          ? Math.round(bestOffer.discountPercent)
+          : Math.round(((originalPriceUsd - dealPriceUsd) / originalPriceUsd) * 100);
+      if (discountPct <= 0) continue;
+
+      const yerPrice = calculateYer(dealPriceUsd, exchangeRate, bestOffer.priceYer ?? undefined);
+      const originalYer = calculateYer(originalPriceUsd, exchangeRate, bestOffer.originalPriceYer ?? undefined);
 
       const specsSummary = [
-        bestOffer?.specs?.cpu ? String(bestOffer.specs.cpu) : null,
-        bestOffer?.specs?.ramGB ? `${bestOffer.specs.ramGB}GB RAM` : null,
-        bestOffer?.specs?.storageGB ? `${bestOffer.specs.storageGB}GB SSD` : null,
-        bestOffer?.condition ? `حالة ${bestOffer.condition}` : null,
+        bestOffer.specs?.cpu ? String(bestOffer.specs.cpu) : null,
+        bestOffer.specs?.ramGB ? `${bestOffer.specs.ramGB}GB RAM` : null,
+        bestOffer.specs?.storageGB ? `${bestOffer.specs.storageGB}GB SSD` : null,
+        bestOffer.condition ? (ar ? `حالة ${bestOffer.condition}` : bestOffer.condition) : null,
       ].filter(Boolean);
 
-      return {
+      items.push({
         id: p.id,
         slug: p.slug,
         category: p.category,
@@ -390,96 +267,19 @@ export default function OffersPage() {
         model: p.model,
         title: p.title,
         summary: p.summary,
-        images: (p.images && p.images.length > 0) ? p.images : (bestOffer?.images || ['/placeholder.webp']),
+        images: p.images?.length ? p.images : bestOffer.images?.length ? bestOffer.images : ['/placeholder.webp'],
         dealPriceUsd,
         originalPriceUsd,
         discountPct,
         yerPrice,
         originalYer,
         specsSummary,
-        inStock: bestOffer?.available !== false,
-        limitedStock: idx % 3 === 0,
-        dealEndsInDays: 3 + (idx % 5),
-        variantId: bestOffer?.variantId || p.id,
-      };
-    });
-
-    // 2. Base catalog items mapped with realistic category pricing
-    const baseList = allCatalogProducts || [];
-    const baseConverted: DealProductItem[] = baseList.map((p, index) => {
-      const cat = p.category || 'laptops';
-      let dealUsd: number;
-      let discountPct: number;
-
-      if (cat === 'storage' || cat === 'hard-drives') {
-        const storagePrices = [32, 45, 65, 28, 55, 78, 38, 48];
-        dealUsd = storagePrices[index % storagePrices.length];
-        discountPct = [20, 25, 15, 30, 18, 22][index % 6];
-      } else if (cat === 'displays') {
-        const displayPrices = [160, 195, 230, 145, 250, 180];
-        dealUsd = displayPrices[index % displayPrices.length];
-        discountPct = [18, 22, 15, 20, 25][index % 5];
-      } else if (cat === 'audio' || cat === 'accessories') {
-        const accessoryPrices = [22, 35, 18, 42, 28, 48];
-        dealUsd = accessoryPrices[index % accessoryPrices.length];
-        discountPct = [25, 30, 20, 35, 22][index % 5];
-      } else if (cat === 'desktops') {
-        const desktopPrices = [280, 340, 420, 250, 390];
-        dealUsd = desktopPrices[index % desktopPrices.length];
-        discountPct = [20, 25, 15, 22, 18][index % 5];
-      } else {
-        const laptopPrices = [340, 420, 490, 290, 560, 380, 450, 520, 310, 470];
-        dealUsd = laptopPrices[index % laptopPrices.length];
-        discountPct = [25, 20, 30, 18, 22, 28, 15][index % 7];
-      }
-
-      const originalUsd = Math.round(dealUsd / (1 - discountPct / 100));
-      const yerPrice = calculateYer(dealUsd, exchangeRate);
-      const originalYer = calculateYer(originalUsd, exchangeRate);
-
-      const specsSummary = [
-        p.specs.cpu,
-        p.specs.ramGB ? `${p.specs.ramGB}GB RAM` : null,
-        p.specs.storageGB ? `${p.specs.storageGB}GB ${p.specs.storageType || 'SSD'}` : null,
-        p.specs.display?.sizeIn ? `${p.specs.display.sizeIn}″ ${p.specs.display.panel || ''}` : null,
-      ].filter(Boolean);
-
-      return {
-        id: p.id,
-        slug: p.slug,
-        category: p.category,
-        brand: p.brand,
-        model: p.model,
-        title: p.title,
-        summary: p.summary,
-        images: p.images,
-        dealPriceUsd: dealUsd,
-        originalPriceUsd: originalUsd,
-        discountPct,
-        yerPrice,
-        originalYer,
-        specsSummary,
-        inStock: p.stock === 'in_stock' || true,
-        limitedStock: index % 3 === 0,
-        dealEndsInDays: 3 + (index % 5),
-        variantId: p.id,
-      };
-    });
-
-    // Merge: live products first, then fill from base list avoiding duplicates by ID or slug
-    const seen = new Set<string>();
-    const merged: DealProductItem[] = [];
-
-    for (const item of [...liveConverted, ...baseConverted]) {
-      const key = item.slug || item.id;
-      if (!seen.has(key)) {
-        seen.add(key);
-        merged.push(item);
-      }
+        inStock: bestOffer.available !== false,
+        variantId: bestOffer.variantId,
+      });
     }
-
-    return merged;
-  }, [catalogApiItems, allCatalogProducts, exchangeRate]);
+    return items;
+  }, [catalogApiItems, exchangeRate, ar]);
 
   // Share Offer / Collection Handler
   const handleShare = async (title: string, slug?: string) => {
@@ -581,10 +381,7 @@ export default function OffersPage() {
     return list;
   }, [discountedProducts, selectedCategory, searchQuery, sortBy, language]);
 
-  // Featured Hero Target Date (3 days from now)
-  const heroTargetDate = useMemo(() => {
-    return new Date(Date.now() + (3 * 24 + 14) * 3600000).toISOString();
-  }, []);
+  const hasProductFilters = selectedCategory !== 'all' || searchQuery.trim().length > 0;
 
   return (
     <main id="main-content" className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -639,7 +436,7 @@ export default function OffersPage() {
         </div>
         <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
           <span className="rounded-full bg-gray-100 px-3 py-1.5 dark:bg-white/5">{discountedProducts.length} {ar ? 'منتج مخفض' : 'discounted products'}</span>
-          <span className="rounded-full bg-gray-100 px-3 py-1.5 dark:bg-white/5">{activeCollections.length} {ar ? 'مجموعة متاحة' : 'available collections'}</span>
+          <span className="rounded-full bg-gray-100 px-3 py-1.5 dark:bg-white/5">{collections.length} {ar ? 'مجموعة متاحة' : 'available collections'}</span>
         </div>
       </section>
       {/* ── Coupons published from the store system ── */}
@@ -732,7 +529,7 @@ export default function OffersPage() {
             >
               <Boxes size={16} />
               <span>{ar ? 'المجموعات المنتقاة' : 'Curated Collections'}</span>
-              <span className="text-xs px-1.5 py-0.2 bg-white/20 rounded-full font-mono">{activeCollections.length}</span>
+              <span className="text-xs px-1.5 py-0.2 bg-white/20 rounded-full font-mono">{collections.length}</span>
             </button>
 
             <button
@@ -850,22 +647,30 @@ export default function OffersPage() {
               </h2>
             </div>
             <span className="text-xs text-gray-500 font-medium">
-              {ar ? `${activeCollections.length} مجموعات متاحة` : `${activeCollections.length} available collections`}
+              {ar ? `${collections.length} مجموعات متاحة` : `${collections.length} available collections`}
             </span>
           </div>
 
+          {collections.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-300 dark:border-white/10">
+              <Boxes size={36} className="mx-auto text-gray-400 mb-2" />
+              <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                {ar ? 'لا توجد مجموعات عروض منشورة حالياً.' : 'No published offer collections yet.'}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {ar ? 'أنشئ مجموعة من لوحة الإدارة مع خصم اختياري (discountPct).' : 'Create a collection in admin with an optional discountPct rule.'}
+              </p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {activeCollections.map(col => {
+            {collections.map(col => {
               const accent = col.rules?.accentColor || '#7c3aed';
               const badge = col.rules?.badge;
               const discount = col.rules?.discountPct;
               const endsAt = col.rules?.endsAt;
               const title = col.title[language] || col.title.ar;
               const desc = col.description[language] || col.description.ar;
-              const isFallback = col.id.startsWith('fallback-');
-              const linkTarget = isFallback
-                ? `/${language}/shop?category=${col.slug.includes('thinkpad') ? 'laptops' : col.slug.includes('creators') ? 'gaming' : 'laptops'}`
-                : `/${language}/collection/${col.slug}`;
+              const linkTarget = `/${language}/collection/${col.slug}`;
 
               return (
                 <div
@@ -920,7 +725,7 @@ export default function OffersPage() {
                   <div className="pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-xs sm:text-sm font-bold">
                     <button
                       type="button"
-                      onClick={() => handleShare(title, isFallback ? undefined : col.slug)}
+                      onClick={() => handleShare(title, col.slug)}
                       className="p-1.5 text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition"
                       title={ar ? 'مشاركة العرض' : 'Share offer'}
                     >
@@ -939,6 +744,7 @@ export default function OffersPage() {
               );
             })}
           </div>
+          )}
         </section>
       )}
 
@@ -979,11 +785,6 @@ export default function OffersPage() {
                           <Percent size={11} />
                           <span>-{product.discountPct}%</span>
                         </span>
-                        {product.limitedStock && (
-                          <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                            {ar ? 'قطع محدودة' : 'Low Stock'}
-                          </span>
-                        )}
                       </div>
 
                       {/* Stock / Demo status badge */}
@@ -1093,8 +894,18 @@ export default function OffersPage() {
             <div className="text-center py-16 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-300 dark:border-white/10">
               <Search size={40} className="mx-auto text-gray-400 mb-2" />
               <p className="text-base font-bold text-gray-700 dark:text-gray-300">
-                {ar ? 'لم يتم العثور على أجهزة مطابقة للبحث' : 'No matching deals found'}
+                {hasProductFilters
+                  ? (ar ? 'لم يتم العثور على أجهزة مطابقة للبحث' : 'No matching deals found')
+                  : (ar ? 'لا توجد منتجات بخصم حقيقي حالياً' : 'No products with a real discount right now')}
               </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
+                {hasProductFilters
+                  ? (ar ? 'جرّب تغيير الفئة أو البحث.' : 'Try another category or search term.')
+                  : (ar
+                    ? 'عيّن «السعر الأصلي» أعلى من سعر البيع في مدير الأسعار بالإدارة ليظهر الخصم هنا.'
+                    : 'Set an original price above the sale price in admin Pricing Manager to list a deal here.')}
+              </p>
+              {hasProductFilters && (
               <button
                 type="button"
                 onClick={() => {
@@ -1105,6 +916,15 @@ export default function OffersPage() {
               >
                 {ar ? 'إعادة ضبط الفلاتر' : 'Reset filters'}
               </button>
+              )}
+              {!hasProductFilters && (
+                <Link
+                  to={`/${language}/shop`}
+                  className="mt-4 inline-flex text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline"
+                >
+                  {ar ? 'تصفح المتجر' : 'Browse the shop'}
+                </Link>
+              )}
             </div>
           )}
         </section>

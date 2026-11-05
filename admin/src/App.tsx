@@ -164,6 +164,7 @@ const navSections: NavSection[] = [
       { to: '/units', key: 'units', icon: Package, permission: 'inventory.manage' },
       { to: '/customers', key: 'customersModule', icon: UsersRound, permission: 'customers.manage' },
       { to: '/pricing', key: 'pricingModule', icon: Coins, permission: 'prices.edit' },
+      { to: '/discounts', key: 'discountsModule', icon: Tag, permission: 'prices.edit' },
       { to: '/csv', key: 'csvModule', icon: FileSpreadsheet, permission: 'inventory.manage' },
       { to: '/expo', key: 'expoContest', icon: Trophy, permission: 'contest.manage' },
     ]
@@ -343,7 +344,8 @@ function Shell() {
             <Route path="orders" element={<Guard permission="orders.manage"><CommerceContainer><OrdersAdmin /></CommerceContainer></Guard>} />
             <Route path="coupons" element={<Guard permission="orders.manage"><CommerceContainer><CouponsManager /></CommerceContainer></Guard>} />
             <Route path="customers" element={<Guard permission="customers.manage"><CommerceContainer><CustomersAdmin /></CommerceContainer></Guard>} />
-            <Route path="pricing" element={<Guard permission="prices.edit"><CommerceContainer><PricingAdmin /></CommerceContainer></Guard>} />
+            <Route path="pricing" element={<Guard permission="prices.edit"><CommerceContainer><PricingAdmin mode="pricing" /></CommerceContainer></Guard>} />
+            <Route path="discounts" element={<Guard permission="prices.edit"><CommerceContainer><PricingAdmin mode="discounts" /></CommerceContainer></Guard>} />
             <Route path="csv" element={<Guard permission="inventory.manage"><CommerceContainer><CsvAdmin /></CommerceContainer></Guard>} />
             <Route path="expo" element={<Guard permission="contest.manage"><ExpoContest /></Guard>} />
             <Route path="analytics" element={<Guard permissions={['analytics.read', 'analytics.limited']}><Analytics /></Guard>} />
@@ -675,7 +677,8 @@ function Dashboard() {
             { to: '/inventory', title: ar ? 'المخزون وحركاته' : 'Inventory & Movements', desc: ar ? 'متابعة الكميات، الجرد، والتسويات المخزنية' : 'Track stock levels, counts & adjustments', icon: Warehouse, perm: 'inventory.manage' },
             { to: '/orders', title: ar ? 'طلبات العملاء' : 'Customer Orders', desc: ar ? 'معالجة مراحل الطلبات والتوصيل والتأكيد' : 'Process order statuses, delivery & pickup', icon: ShoppingBag, perm: 'orders.manage' },
             { to: '/categories', title: ar ? 'الفئات والتصنيفات' : 'Categories Hierarchy', desc: ar ? 'هيكلة أقسام المتجر الرئيسية والفرعية' : 'Manage main and sub categories', icon: FolderTree, perm: 'catalog.edit' },
-            { to: '/pricing', title: ar ? 'التسعير وواتساب' : 'Pricing & WhatsApp', desc: ar ? 'تحديث سعر الصرف ورقم واتساب المعتمد' : 'Update exchange rate and WhatsApp phone', icon: Coins, perm: 'prices.edit' },
+            { to: '/pricing', title: ar ? 'التسعير وواتساب' : 'Pricing & WhatsApp', desc: ar ? 'سعر الصرف وأسعار البيع' : 'Exchange rate and sale prices', icon: Coins, perm: 'prices.edit' },
+            { to: '/discounts', title: ar ? 'خصومات المتجر' : 'Store discounts', desc: ar ? 'شارات الخصم والسعر الأصلي المشطوب' : 'Discount badges and crossed-out prices', icon: Tag, perm: 'prices.edit' },
             { to: '/media', title: ar ? 'مكتبة الصور' : 'Media Library', desc: ar ? 'رفع وإدارة الصور المعتمدة للمتجر' : 'Upload and manage store images', icon: Image, perm: 'catalog.edit' },
             { to: '/security', title: ar ? 'الحساب والأمان' : 'Account & Security', desc: ar ? 'إعدادات كلمة المرور والتحقق بخطوتين والجلسات' : 'Password, 2FA and active sessions', icon: ShieldCheck },
           ].filter(m => (!m.perm && !m.permissions) || (m.perm && can(user.role, m.perm as Permission)) || (m.permissions && m.permissions.some(p => can(user.role, p as Permission)))).map(m => (

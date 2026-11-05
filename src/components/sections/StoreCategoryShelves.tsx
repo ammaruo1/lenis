@@ -258,7 +258,9 @@ export default function StoreCategoryShelves() {
                       <Link to={href} className="store-product-image" aria-label={titleText}>
                         {image ? <img src={image} alt={titleText} loading="lazy" /> : <Icon size={48} strokeWidth={1.25} aria-hidden="true" />}
                         {condition && <span className="store-product-condition">{condition}</span>}
-                        {offer?.discountPercent ? <span className="store-product-discount">-{offer.discountPercent}%</span> : null}
+                        {offer?.originalPriceUsd && offer.priceUsd && Number(offer.originalPriceUsd) > Number(offer.priceUsd) && offer.discountPercent ? (
+                          <span className="store-product-discount">-{offer.discountPercent}%</span>
+                        ) : null}
                       </Link>
                       <div className="store-product-details">
                         <span className="store-product-brand" dir="ltr">{product.brand}</span>

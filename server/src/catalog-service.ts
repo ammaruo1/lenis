@@ -11,11 +11,13 @@ type Row=Prisma.ProductGetPayload<{include:typeof productInclude}>;
 export function productDto(p:Row,admin=false){
   const variants=p.variants.filter(v=>v.active),priced=variants.filter(v=>v.priceUsd!==null).sort((a,b)=>a.priceUsd!.cmp(b.priceUsd!)),publicUsd=priced[0]?.priceUsd??null;
   const available=variants.some(v=>v.inventoryReviewed&&(v.inventoryMode==='quantity'?v.quantity>0:v.units.some(u=>u.available)));
-  const origUsd = p.originalPriceUsd ? Number(p.originalPriceUsd) : null;
-  const discPct = p.discountPercent ? Number(p.discountPercent) : (origUsd && publicUsd && origUsd > Number(publicUsd) ? Math.round(((origUsd - Number(publicUsd)) / origUsd) * 100) : null);
+  const publicUsdNum=publicUsd===null?null:Number(publicUsd);
+  const origColumn=p.originalPriceUsd?Number(p.originalPriceUsd):null;
+  const origUsd=origColumn&&publicUsdNum&&origColumn>publicUsdNum?origColumn:null;
+  const discPct=origUsd&&publicUsdNum?Math.round(((origUsd-publicUsdNum)/origUsd)*100):null;
   return {id:p.id,slug:p.slug,category:p.category,brand:p.brand?.name??'',model:p.model,title:p.title,summary:p.summary,condition:p.condition,warrantyMonths:p.warrantyMonths,
     price:{
-      usd:admin?p.priceUsd?.toFixed(2)??null:publicUsd===null?null:Number(publicUsd),
+      usd:admin?p.priceUsd?.toFixed(2)??null:publicUsdNum,
       originalUsd:origUsd,
       discountPercent:discPct,
       yer:admin?p.priceYer?.toFixed(2)??null:null,

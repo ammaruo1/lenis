@@ -1,10 +1,12 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import { rootCertificates } from 'node:tls';
 
 export function createDb(url: string): PrismaClient {
   const parsed = new URL(url);
   if (parsed.protocol !== 'mysql:') throw new Error('MySQL DATABASE_URL is required');
   const isProd = process.env.NODE_ENV === 'production';
+  const isRemoteHost = process.env.USE_REMOTE_DB === 'true';
   return new PrismaClient({
     adapter: new PrismaMariaDb({
       host: parsed.hostname,
@@ -22,8 +24,10 @@ export function createDb(url: string): PrismaClient {
       acquireTimeout: 12000,
       timezone: '+00:00',
       // Reduced from 10s → 5s: fail fast rather than long hangs
-      connectTimeout: 5000,
-      ...(parsed.searchParams.get('ssl') === 'true' ? { ssl: true } : {}),
+      connectTimeout: isRemoteHost ? 30000 : isProd ? 5000 : 20000,
+      ...(parsed.searchParams.get('ssl') === 'true'
+        ? { ssl: { ca: rootCertificates.join('\n'), rejectUnauthorized: true, minVersion: 'TLSv1.2' } }
+        : {}),
       ...(['127.0.0.1', 'localhost'].includes(parsed.hostname) ? { allowPublicKeyRetrieval: true } : {}),
     }),
   });

@@ -28,12 +28,48 @@ import {crmRoutes} from './routes-crm.js';
 
 import { renderSeoHtml, getBaseUrl } from './seo-meta.js';
 import { generateSitemapXml } from './sitemap.js';
+import { ensureRemoteCommerceSchema } from './ensure-pricing-rule-schema.js';
 
 export async function buildApp(config: AppConfig, db: PrismaClient, options: { disableRateLimits?: boolean } = {}) {
   const app = Fastify({ bodyLimit: 32 * 1024, trustProxy: config.TRUST_PROXY, disableRequestLogging: config.NODE_ENV === 'production', logger: config.LOG_LEVEL === 'silent' ? false : {
     level: config.LOG_LEVEL, redact: ['req.headers.cookie', 'req.headers.authorization', 'req.headers["x-csrf-token"]', 'res.headers["set-cookie"]'],
     serializers: { req: request => ({ id: request.id, method: request.method, path: request.url?.split('?')[0] }), res: reply => ({ statusCode: reply.statusCode }) },
   } });
+  const shouldEnsureRemoteSchema =
+    config.NODE_ENV === 'production' || process.env.ENSURE_REMOTE_SCHEMA === 'true';
+  let remoteSchemaReady: Promise<void> | null = null;
+  const ensureRemoteSchemaOnce = () => {
+    if (!shouldEnsureRemoteSchema) return Promise.resolve();
+    if (!remoteSchemaReady) {
+      remoteSchemaReady = (async () => {
+        let last: unknown;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await ensureRemoteCommerceSchema(db);
+            return;
+          } catch (error) {
+            last = error;
+            if (attempt < 2) await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+          }
+        }
+        throw last;
+      })().catch(error => {
+        remoteSchemaReady = null;
+        throw error;
+      });
+    }
+    return remoteSchemaReady;
+  };
+  if (shouldEnsureRemoteSchema) {
+    app.addHook('onRequest', async request => {
+      if (!request.url.startsWith('/api/')) return;
+      try {
+        await ensureRemoteSchemaOnce();
+      } catch (error) {
+        request.log.warn({ error }, 'Remote commerce schema ensure skipped');
+      }
+    });
+  }
   app.decorateRequest('auth', null);
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);

@@ -3,6 +3,7 @@ import {normalizeSearch,CollectionRules,SpecField,type SpecFieldInput,extractPro
 import {z} from 'zod';
 import {productDto} from './catalog-service.js';
 import {ApiError} from './errors.js';
+import {resolveSalePriceUsd,resolveStoreDiscountPercent,resolveStoreOriginalPriceUsd} from './sale-pricing.js';
 export const variantInclude={units:true,product:{include:{brand:true,variants:{include:{units:{select:{available:true}}}},images:{orderBy:{sort:'asc' as const},include:{media:{select:{id:true,originalPath:true}}}},compatibleWith:true}}} satisfies Prisma.ProductVariantInclude;
 export type VariantRow=Prisma.ProductVariantGetPayload<{include:typeof variantInclude}>;
 export type Sellable={variantId:string;unitId?:string;sku:string;condition:string;priceUsd:string|null;originalPriceUsd?:string|null;priceYer?:string|null;originalPriceYer?:string|null;discountPercent?:number|null;specs:Record<string,unknown>;images:string[];warrantyMonths:number|null;available:boolean;batteryHealthPct:number|null;inspection:unknown;defects:unknown;availabilityMode?:'in_stock'|'local_order'|'external_order';leadTimeDays?:number|null};
@@ -57,15 +58,10 @@ export function offers(v:VariantRow):Sellable[]{
   }
   if(specs.capacityGB!==undefined&&specs.storageGB===undefined)specs.storageGB=specs.capacityGB;
   if(specs.hddType&&!specs.storageType)specs.storageType=specs.hddType;
-  const priceUsdStr=v.priceUsd?.toFixed(2)??null;
-  let originalPriceUsdStr:string|null=null;
-  const rawOrig=specs.originalPriceUsd??(v.specs as Record<string,unknown>)?.originalPriceUsd??(v.product.specs as Record<string,unknown>)?.originalPriceUsd;
-  if(rawOrig!==null&&rawOrig!==undefined&&!isNaN(Number(rawOrig))&&Number(rawOrig)>0){
-    originalPriceUsdStr=Number(rawOrig).toFixed(2);
-  }
-  const discountPercent=(originalPriceUsdStr&&priceUsdStr&&Number(originalPriceUsdStr)>Number(priceUsdStr))
-    ?Math.round(((Number(originalPriceUsdStr)-Number(priceUsdStr))/Number(originalPriceUsdStr))*100)
-    :null;
+  const priceUsdStr=resolveSalePriceUsd(v,v.product);
+  const originalPriceUsdStr=resolveStoreOriginalPriceUsd(v,v.product);
+  const discountPercent=resolveStoreDiscountPercent(v,v.product);
+  delete specs.originalPriceUsd;
   const availMode=((v as Record<string,unknown>).availabilityMode||'in_stock') as 'in_stock'|'local_order'|'external_order';
   const leadTimeDays=((v as Record<string,unknown>).leadTimeDays as number|null|undefined)??(availMode==='local_order'?2:availMode==='external_order'?10:null);
   const isPreorder=availMode==='local_order'||availMode==='external_order';

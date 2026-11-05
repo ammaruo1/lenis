@@ -158,6 +158,7 @@ model User {
   sessions           Session[]
   auditLogs          AuditLog[]
   priceChanges       PriceHistory[]
+  priceAdjustmentRules PriceAdjustmentRule[]
   createdMedia       MediaAsset[]
   assignedLeads      Lead[]
   activities         LeadActivity[]
@@ -305,6 +306,20 @@ model PriceHistory {
   @@index([productId, changedAt])
   @@index([changedBy])
   @@index([changedAt])
+}
+model PriceAdjustmentRule {
+  id         String    @id @default(uuid()) @db.VarChar(100)
+  action     String    @db.VarChar(40)
+  summary    String    @db.VarChar(500)
+  params     Json      @db.Json
+  items      Json      @db.Json
+  itemCount  Int
+  revertedAt DateTime? @db.DateTime(3)
+  createdBy  String    @db.VarChar(100)
+  createdAt  DateTime  @default(now()) @db.DateTime(3)
+  user       User      @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  @@index([createdAt])
+  @@index([revertedAt])
 }
 model Bundle {
   id             String @id @default(uuid()) @db.VarChar(100)

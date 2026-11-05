@@ -355,7 +355,11 @@ export default function Categories() {
               const yerPrice = calculateYer(priceUsd, exchangeRate);
               const yerFormatted = formatPriceYer(yerPrice, language);
 
-              const secondaryPrice = originalPriceUsd && String(originalPriceUsd) !== String(priceUsd)
+              const hasSaleDiscount =
+                originalPriceUsd != null &&
+                priceUsd != null &&
+                Number(originalPriceUsd) > Number(priceUsd);
+              const secondaryPrice = hasSaleDiscount
                 ? `US $${originalPriceUsd} ${ar ? 'سابقاً' : 'Was'}`
                 : yerFormatted;
 

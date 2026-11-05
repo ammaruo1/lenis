@@ -60,7 +60,7 @@ for(const file of [...new Set(files)].sort()){
 if(prebuilt){
   const stagedPackage=join(staging,'package.json');
   const stagedJson=JSON.parse(readFileSync(stagedPackage,'utf8'));
-  stagedJson.scripts.postinstall='npm run db:generate -w @aljeel/server && node scripts/admin/verify-hostinger-runtime.mjs';
+  stagedJson.scripts.postinstall='npm run db:generate -w @aljeel/server && npm run db:migrate -w @aljeel/server && node scripts/admin/verify-hostinger-runtime.mjs';
   writeFileSync(stagedPackage,JSON.stringify(stagedJson,null,2)+'\n');
   const packageEntry=manifest.files.find(entry=>entry.path==='package.json');
   packageEntry.sha256=createHash('sha256').update(readFileSync(stagedPackage)).digest('hex');
