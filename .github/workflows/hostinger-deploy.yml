@@ -1,0 +1,43 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hostinger-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+      HOSTINGER_ACCOUNT_USERNAME: ${{ secrets.HOSTINGER_ACCOUNT_USERNAME }}
+      HOSTINGER_DOMAIN: alarabiye.com
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the storefront, server, and admin app
+        run: npm run build:all
+
+      - name: Package the Hostinger deployment
+        run: node scripts/admin/package-hostinger.mjs --prebuilt
+
+      - name: Upload and start the Hostinger build
+        run: node scripts/admin/deploy-hostinger-api.mjs
