@@ -24,6 +24,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { useCatalog, useExchangeRate } from '@/data/CatalogContext';
 import { calculateYer, formatPriceYer } from '@/lib/currency';
 import { trackWhatsappClick } from '@/analytics';
+import { whatsappPhoneForItems } from '@/data/whatsapp';
 import { CUSTOMER_PASSWORD_MIN } from '@aljeel/shared';
 import {
   shopApi,
@@ -45,7 +46,7 @@ export default function CartPage() {
   const ar = language === 'ar';
   const t = commerceCopy[language];
   const navigate = useNavigate();
-  const { site } = useCatalog();
+  const { site, categories } = useCatalog();
   const exchangeRate = useExchangeRate();
 
   const [cart, setCart] = useState<Preview | null>(null);
@@ -234,7 +235,7 @@ export default function CartPage() {
         ? calculateYer(parseFloat(finalTotalUsdStr), activeExchangeRate)
         : null;
 
-  const whatsappPhone = site?.whatsapp || '967771001044';
+  const whatsappPhone = whatsappPhoneForItems(categories, cart?.items.map(item => item.category) ?? [], site?.whatsapp);
 
   const handleWhatsAppCheckout = () => {
     if (!cart || cart.items.length === 0) return;

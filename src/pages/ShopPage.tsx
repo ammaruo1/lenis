@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
@@ -46,6 +46,7 @@ import PopularSearchFilters from '@/components/shop/PopularSearchFilters';
 import RelatedSearches from '@/components/shop/RelatedSearches';
 import '@/commerce.css';
 import { trackPageView, trackFilterUsed, trackSearch } from '@/analytics';
+import { isSkuQuery } from '@aljeel/shared';
 
 export default function ShopPage({ initialCategory }: { initialCategory?: string } = {}) {
   const { category: rawCategory } = useParams();
@@ -75,6 +76,11 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
   const [suggestionFilter, setSuggestionFilter] = useState<'all' | 'products' | 'categories'>('all');
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  const activeCategoryTitle = category === 'displays-projectors'
+    ? (language === 'ar' ? 'أجهزة العرض والبروجكتورات' : 'Projectors')
+    : data?.categories.find(c => c.slug === category)?.title?.[language]
+      || (category === 'laptops' ? (language === 'ar' ? 'أجهزة اللابتوب' : 'Laptops') : category || '');
 
   const requestParams = new URLSearchParams(params);
   requestParams.delete('focusSearch');
@@ -143,56 +149,61 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
   }, [query, category, language]);
 
   // Dynamic page title & meta description for client-side SEO / Google Search
-  useEffect(() => {
-    const isAr = language === 'ar';
-    const siteTitle = isAr ? 'الجيل العربي الرقمي' : 'Al-Jeel Digital';
-    const matchedCategory = data?.categories.find(c => c.slug === category);
-    const catTitle = matchedCategory?.title?.[language] || (category === 'laptops' ? (isAr ? 'أجهزة لابتوب' : 'Laptops') : (category || ''));
-
-    let title = '';
-    let description = '';
-
-    if (catTitle) {
-      title = isAr
-        ? `${catTitle} في اليمن — أسعار ومواصفات | ${siteTitle} صنعاء`
-        : `${catTitle} in Yemen — Best Prices & Specs | ${siteTitle} Sana'a`;
-      description = isAr
-        ? `تصفح أفضل أجهزة ${catTitle} الأصلية في اليمن بأسعار منافسة بالدولار والريال اليمني. فحص معتمد وضمان حقيقي مع توصيل فوري في صنعاء وشحن لكافة المحافظات: عدن، تعز، حضرموت، إب، ذمار، مأرب.`
-        : `Explore certified ${catTitle} in Yemen at competitive prices in USD and YER. Technical inspection, official warranty, and shipping across all Yemeni governorates.`;
-    } else {
-      title = isAr
-        ? `متجر الإلكترونيات واللابتوبات في اليمن | ${siteTitle} صنعاء`
-        : `Electronics & Laptops Store in Yemen | ${siteTitle} Sana'a`;
-      description = isAr
-        ? `المتجر الإلكتروني الأول لأجهزة اللابتوب ومعدات تقنية المعلومات في اليمن. فحص معتمد وضمان حقيقي مع خدمة التوصيل والشحن لكافة المحافظات اليمنية (صنعاء، عدن، تعز، حضرموت، إب، ذمار، مأرب).`
-        : `Premier electronics & laptop store in Yemen. Verified inspection, real warranty, and nationwide delivery to all Yemeni governorates.`;
-    }
-
-    document.title = title;
-    const descMeta = document.querySelector('meta[name="description"]');
-    if (descMeta) {
-      descMeta.setAttribute('content', description);
-    }
-  }, [category, data?.categories, language]);
-
   const shopJsonLd = useMemo(() => {
     const isAr = language === 'ar';
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://aljeel-digital.com';
-    const matchedCategory = data?.categories.find(c => c.slug === category);
-    const catTitle = matchedCategory?.title?.[language] || (category === 'laptops' ? (isAr ? 'أجهزة لابتوب' : 'Laptops') : (category || ''));
-    const pageTitle = catTitle ? `${catTitle} في اليمن` : (isAr ? 'متجر الإلكترونيات واللابتوبات في اليمن' : 'Electronics & Laptop Store in Yemen');
+    const catTitle = activeCategoryTitle;
+    const pageTitle = catTitle
+      ? (isAr ? `أفضل ${catTitle} في صنعاء | الجيل العربي الرقمي` : `${catTitle} in Sana'a | Al-Jeel Digital`)
+      : (isAr ? 'متجر الإلكترونيات واللابتوبات في صنعاء | الجيل العربي الرقمي' : "Electronics & Laptop Store in Sana'a | Al-Jeel Digital");
     const pageUrl = typeof window !== 'undefined' ? window.location.href : `${origin}/${language}/shop`;
 
+    const listedItems = data?.items.slice(0, 10) ?? [];
     return {
       '@context': 'https://schema.org',
       '@type': 'CollectionPage',
       name: pageTitle,
       url: pageUrl,
-      description: isAr
-        ? 'تسوق أفضل أجهزة اللابتوب ومعدات تقنية المعلومات في اليمن مع فحص معتمد وضمان حقيقي وتوصيل لكافة المحافظات: صنعاء، عدن، تعز، حضرموت، إب، ذمار، مأرب.'
-        : 'Shop certified laptops and IT hardware in Yemen with warranty and shipping across all Yemeni governorates.',
+      ...(listedItems.length ? {
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: data?.total ?? listedItems.length,
+          itemListElement: listedItems.map((item, index) => {
+            const localized = item.product.title[language] || item.product.title.ar;
+            const image = item.offers.find(offer => offer.images.length)?.images[0] || item.product.images[0];
+            return {
+              '@type': 'ListItem',
+              position: index + 1,
+              item: {
+                '@type': 'Product',
+                name: localized,
+                description: item.product.summary[language] || item.product.summary.ar,
+                brand: { '@type': 'Brand', name: item.product.brand },
+                url: `${origin}/${language}/shop/${item.product.category}/${item.product.slug}`,
+                ...(image ? { image: image.startsWith('http') ? image : `${origin}${image.startsWith('/') ? '' : '/'}${image}` } : {}),
+                ...(item.offers.find(offer => offer.priceUsd !== null) ? {
+                  offers: {
+                    '@type': 'Offer',
+                    priceCurrency: 'USD',
+                    price: item.offers.find(offer => offer.priceUsd !== null)?.priceUsd,
+                    availability: item.offers.some(offer => offer.available) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+                    url: `${origin}/${language}/shop/${item.product.category}/${item.product.slug}`,
+                  },
+                } : {}),
+              },
+            };
+          }),
+        },
+      } : {}),
+      description: catTitle
+        ? (isAr
+          ? `تصفح أفضل ${catTitle} من متجر الجيل العربي الرقمي في صنعاء، اليمن. قارن الأنواع والمواصفات، وزرنا في منتصف شارع صخر.`
+          : `Browse ${catTitle} at Al-Jeel Digital in Sana'a, Yemen. Compare available types and specifications. Visit us on Mid-Sakhr Street.`)
+        : (isAr
+          ? 'تصفح أجهزة اللابتوب ومعدات التقنية من متجر الجيل العربي الرقمي في صنعاء، اليمن. زورونا في منتصف شارع صخر.'
+          : "Browse laptops and IT equipment from Al-Jeel Digital in Sana'a, Yemen. Visit us on Mid-Sakhr Street."),
     };
-  }, [category, data?.categories, language]);
+  }, [activeCategoryTitle, category, data?.categories, data?.items, data?.total, language]);
 
   useEffect(() => setSearch(params.get('q') ?? ''), [query, params]);
 
@@ -289,10 +300,11 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
     setSearchFocused(false);
     const next = new URLSearchParams();
     if (term) next.set('q', term);
-    if (term && routeCategory) next.set('category', routeCategory);
+    const searchCategory = isSkuQuery(term) ? null : routeCategory;
+    if (term && searchCategory) next.set('category', searchCategory);
     const search = next.toString();
     navigate({
-      pathname: routeCategory ? `/${language}/shop/${routeCategory}` : `/${language}/shop`,
+      pathname: searchCategory ? `/${language}/shop/${searchCategory}` : `/${language}/shop`,
       search: search ? `?${search}` : '',
     });
   };
@@ -307,7 +319,7 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
     return [...params.entries()].filter(([k]) => !['q', 'page', 'sort'].includes(k));
   }, [params]);
 
-  const getChipLabel = (k: string, v: string) => {
+  const getChipLabel = useCallback((k: string, v: string) => {
     const isAr = language === 'ar';
     if (k === 'q') return `${isAr ? 'بحث' : 'Search'}: "${v}"`;
     if (k === 'available') return isAr ? 'المتوفر فوراً' : t.available;
@@ -421,7 +433,52 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
     if (k === 'spec_audioType') return isAr ? `نوع الصوتيات: ${v}` : `Audio: ${v}`;
     if (k === 'spec_anc') return v === 'true' ? (isAr ? 'عزل ضوضاء ANC' : 'ANC') : (isAr ? 'عزل عادي' : 'Standard');
     return v;
-  };
+  }, [data, language, t]);
+
+  const seoFilterLabels = useMemo(() => [...params.entries()]
+    .filter(([key]) => !['page', 'sort', 'q', 'category', 'focusSearch'].includes(key))
+    .map(([key, value]) => getChipLabel(key, value)), [getChipLabel, params]);
+
+  useEffect(() => {
+    const isAr = language === 'ar';
+    const siteTitle = isAr ? 'الجيل العربي الرقمي' : 'Al-Jeel Digital';
+    const catTitle = activeCategoryTitle || (isAr ? 'متجر الإلكترونيات' : 'Electronics Store');
+    const visibleFilters = seoFilterLabels.slice(0, 3).join(isAr ? '، ' : ', ');
+    const title = visibleFilters
+      ? `${catTitle} — ${visibleFilters} في ${isAr ? 'صنعاء' : "Sana'a"} | ${siteTitle}`
+      : (isAr ? `أفضل ${catTitle} في صنعاء | ${siteTitle}` : `${catTitle} in Sana'a | ${siteTitle}`);
+    const searchTerm = params.get('q')?.trim();
+    const description = visibleFilters
+      ? (isAr
+        ? `تصفح ${catTitle} حسب المواصفات المختارة: ${visibleFilters}، من متجر ${siteTitle} في صنعاء، اليمن. موقعنا في منتصف شارع صخر.`
+        : `Browse ${catTitle} by selected specifications: ${visibleFilters}, from ${siteTitle} in Sana'a, Yemen. Visit us on Mid-Sakhr Street.`)
+      : searchTerm
+        ? (isAr ? `نتائج البحث عن «${searchTerm}» ضمن ${catTitle} في صنعاء، اليمن. متجر ${siteTitle}، منتصف شارع صخر.` : `Search results for “${searchTerm}” in ${catTitle}, Sana'a, Yemen. ${siteTitle}, Mid-Sakhr Street.`)
+        : (isAr
+          ? `تصفح أفضل ${catTitle} من متجر ${siteTitle} في صنعاء، اليمن. قارن الأنواع والمواصفات، وزرنا في منتصف شارع صخر.`
+          : `Browse ${catTitle} at ${siteTitle} in Sana'a, Yemen. Compare available types and specifications. Visit us on Mid-Sakhr Street.`);
+
+    document.title = title;
+    const updateMeta = (selector: string, content: string) => {
+      document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', content);
+    };
+    updateMeta('meta[name="description"]', description);
+    updateMeta('meta[property="og:title"]', title);
+    updateMeta('meta[property="og:description"]', description);
+    updateMeta('meta[name="twitter:title"]', title);
+    updateMeta('meta[name="twitter:description"]', description);
+    const firstProduct = data?.items[0];
+    const firstImage = firstProduct?.offers.find(offer => offer.images.length)?.images[0]
+      || firstProduct?.product.images[0];
+    const imageUrl = firstImage
+      ? (firstImage.startsWith('http') ? firstImage : `${window.location.origin}${firstImage.startsWith('/') ? '' : '/'}${firstImage}`)
+      : `${window.location.origin}/desktop-ar.png`;
+    const imageAlt = firstProduct?.product.title[language] || firstProduct?.product.title.ar || title;
+    updateMeta('meta[property="og:image"]', imageUrl);
+    updateMeta('meta[property="og:image:secure_url"]', imageUrl);
+    updateMeta('meta[property="og:image:alt"]', imageAlt);
+    updateMeta('meta[name="twitter:image"]', imageUrl);
+  }, [activeCategoryTitle, category, data?.categories, data?.items, language, params, query, seoFilterLabels]);
 
   const sortOptions: [string, string][] = useMemo(() => [
     ['relevance', t.relevance],
@@ -693,7 +750,7 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
                     <Search size={16} aria-hidden="true" />
                     <span className="store-search-suggestion-copy">
                       <span className="store-search-suggestion-title">{item.value}</span>
-                      <span className="store-search-suggestion-meta">{item.categoryTitle}</span>
+                      <span className="store-search-suggestion-meta">{item.categoryTitle}{item.sku ? ` · SKU ${item.sku}` : ''}</span>
                     </span>
                     <span className="store-search-suggestion-count">{item.count}</span>
                   </button>

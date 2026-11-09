@@ -13,7 +13,17 @@ export const Money=z.string().regex(/^\d{1,12}(\.\d{1,2})?$/).refine(v=>Number(v
 export const SpecValues=z.record(z.string().max(80),z.union([z.string().max(2000),z.number().finite(),z.boolean(),z.array(z.string().max(160)).max(30)]));
 export const SpecField=z.object({key:id,title:BiText,valueType:z.enum(['number','text','boolean','single','multi']),unit:z.string().max(40).nullable().default(null),options:z.array(z.string().max(160)).max(100).default([]),required:z.boolean().default(false),filterable:z.boolean().default(false),card:z.boolean().default(false),sort:z.number().int().default(0)});
 export const TypeEdit=z.object({id:slug,title:BiText,fields:z.array(SpecField).max(80),revision:z.string().optional()});
-export const CategoryEdit=z.object({slug,title:BiText,description:BiText,parentSlug:id.nullable(),productTypeId:slug.nullable(),imageId:id.nullable(),sort:z.number().int(),status:z.enum(['draft','published','archived']),revision:z.string().optional()});
+const WhatsappPhone=z.string().trim().max(32).nullable().optional().transform(value=>{
+  if(value===undefined)return undefined;
+  if(!value)return null;
+  const westernDigits=value.replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-0x0660)).replace(/[۰-۹]/g,d=>String(d.charCodeAt(0)-0x06f0));
+  let digits=westernDigits.replace(/\D/g,'');
+  if(digits.startsWith('00'))digits=digits.slice(2);
+  if(digits.length===10&&digits.startsWith('07'))digits=digits.slice(1);
+  if(digits.length===9&&digits.startsWith('7'))digits='967'+digits;
+  return digits;
+}).refine(value=>value===undefined||value===null||/^\d{8,15}$/.test(value),'invalid_whatsapp');
+export const CategoryEdit=z.object({slug,title:BiText,description:BiText,parentSlug:id.nullable(),productTypeId:slug.nullable(),imageId:id.nullable(),whatsapp:WhatsappPhone,sort:z.number().int(),status:z.enum(['draft','published','archived']),revision:z.string().optional()});
 export const VariantEdit=z.object({id,productId:id,sku:id,options:SpecValues,specs:SpecValues,images:z.array(z.string().regex(/^\/api\/media\/[a-zA-Z0-9-]+$/)).max(20),priceUsd:Money,warrantyMonths:z.number().int().min(0).max(120).nullable(),condition:ConditionEnum,inventoryMode:z.enum(['quantity','serialized']),availabilityMode:AvailabilityModeEnum.default('in_stock'),leadTimeDays:z.number().int().min(0).max(90).nullable().default(null),active:z.boolean(),revision:z.string().optional()});
 export const UnitEdit=z.object({id,variantId:id,serialNumber:z.string().min(1).max(200),condition:ConditionEnum,batteryHealthPct:z.number().int().min(0).max(100).nullable(),inspection:z.record(z.string(),z.union([z.boolean(),z.string().max(2000)])),defects:z.array(BiText).max(30),images:z.array(z.string().regex(/^\/api\/media\/[a-zA-Z0-9-]+$/)).max(20),revision:z.string().optional()});
 export const CollectionRules=z.object({categories:z.array(id).default([]),brands:z.array(id).default([]),conditions:z.array(ConditionEnum).default([]),available:z.boolean().nullable().default(null),min:Money.optional(),max:Money.optional(),endsAt:z.string().datetime().nullable().optional(),badge:z.string().max(60).nullable().optional(),accentColor:z.string().max(20).nullable().optional(),discountPct:z.number().int().min(1).max(99).nullable().optional(),pinned:z.boolean().optional()});

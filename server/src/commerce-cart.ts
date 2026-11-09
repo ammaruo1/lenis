@@ -10,7 +10,7 @@ import {audit} from './audit.js';
 import {validateAndCalculateCoupon} from './coupon-service.js';
 import type {CouponValidationResult} from '@aljeel/shared';
 type Db=PrismaClient|Prisma.TransactionClient;
-export type SnapshotItem={variantId:string;unitId:string|null;productId:string;sku:string;title:unknown;options:unknown;condition:string;inspection:unknown;defects:unknown;quantity:number;unitPriceUsd:string|null;linePriceUsd:string|null;packageId:string|null;priceIncluded?:boolean;onSale?:boolean;images:string[];warrantyMonths:number|null};
+export type SnapshotItem={variantId:string;unitId:string|null;productId:string;category?:string;sku:string;title:unknown;options:unknown;condition:string;inspection:unknown;defects:unknown;quantity:number;unitPriceUsd:string|null;linePriceUsd:string|null;packageId:string|null;priceIncluded?:boolean;onSale?:boolean;images:string[];warrantyMonths:number|null};
 const explicitSale=(specs:Record<string,unknown>,productSpecs:unknown,variantSpecs:unknown,priceUsd:string|null)=>{
   const raw=specs.originalPriceUsd??jsonObject(variantSpecs).originalPriceUsd??jsonObject(productSpecs).originalPriceUsd;
   return raw!==null&&raw!==undefined&&priceUsd!==null&&Number(raw)>Number(priceUsd);
@@ -52,7 +52,7 @@ export async function cartPreview(db:Db,raw:unknown,couponCode?:string|null,cust
     if(!isPreorder&&v.inventoryMode==='quantity'&&v.quantity<quantity)throw new ApiError(409,'insufficient_stock');
     if(unitId){if(usedUnits.has(unitId))throw new ApiError(409,'duplicate_unit');usedUnits.add(unitId);}
     const price=o.priceUsd===null?null:new Prisma.Decimal(o.priceUsd).mul(quantity);
-    const snapshot:SnapshotItem={variantId,unitId:unitId??null,productId:v.productId,sku:v.sku,title:v.product.title,options:v.options,condition:o.condition,inspection:o.inspection,defects:o.defects,quantity,unitPriceUsd:o.priceUsd,linePriceUsd:price?.toFixed(2)??null,packageId,onSale:explicitSale(o.specs,v.product.specs,v.specs,o.priceUsd),images:o.images,warrantyMonths:o.warrantyMonths};
+    const snapshot:SnapshotItem={variantId,unitId:unitId??null,productId:v.productId,category:v.product.category,sku:v.sku,title:v.product.title,options:v.options,condition:o.condition,inspection:o.inspection,defects:o.defects,quantity,unitPriceUsd:o.priceUsd,linePriceUsd:price?.toFixed(2)??null,packageId,onSale:explicitSale(o.specs,v.product.specs,v.specs,o.priceUsd),images:o.images,warrantyMonths:o.warrantyMonths};
     items.push(snapshot);return price;
   }
   for(const line of lines){
@@ -130,7 +130,7 @@ export async function cartPreview(db:Db,raw:unknown,couponCode?:string|null,cust
   };
   const tokenPayload={
     lines,
-    items:items.map(i=>({variantId:i.variantId,unitId:i.unitId,packageId:i.packageId,quantity:i.quantity,unitPriceUsd:i.unitPriceUsd,linePriceUsd:i.linePriceUsd,priceIncluded:i.priceIncluded??false})),
+    items:items.map(i=>({variantId:i.variantId,unitId:i.unitId,packageId:i.packageId,category:i.category,quantity:i.quantity,unitPriceUsd:i.unitPriceUsd,linePriceUsd:i.linePriceUsd,priceIncluded:i.priceIncluded??false})),
     subtotalUsd:preview.subtotalUsd,
     subtotalYer:preview.subtotalYer,
     discountUsd:preview.discountUsd,

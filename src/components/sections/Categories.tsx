@@ -165,7 +165,7 @@ export default function Categories() {
           category: prod.category,
           title: prod.title?.[language] || prod.title?.ar || prod.model,
           priceUsd: primaryOffer?.priceUsd ?? null,
-          originalPriceUsd: primaryOffer?.originalPriceUsd ?? null,
+          originalPriceUsd: primaryOffer?.discountSource ? (primaryOffer.originalPriceUsd ?? null) : null,
           condition: primaryOffer?.condition || 'new',
           images: prod.images || [],
         };
@@ -184,7 +184,7 @@ export default function Categories() {
       category: p.category,
       title: p.title?.[language] || p.title?.ar || p.model,
       priceUsd: p.price.usd,
-      originalPriceUsd: (typeof p.specs?.originalPriceUsd === 'number' || typeof p.specs?.originalPriceUsd === 'string') ? p.specs.originalPriceUsd : null,
+      originalPriceUsd: null,
       condition: p.condition || 'new',
       images: p.images || [],
     }));

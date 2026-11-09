@@ -273,7 +273,7 @@ export function CommerceCatalog({module}: {module: CatalogModule}) {
   function start(row?: Row) {
     const revision = row ? { revision: row.updatedAt } : {}, id = crypto.randomUUID(), bi = { ar: '', en: '' };
     const defaults: Record<CatalogModule, Row> = {
-      categories: { slug: '', title: bi, description: bi, parentSlug: null, productTypeId: null, imageId: null, status: 'draft', sort: 0 },
+      categories: { slug: '', title: bi, description: bi, parentSlug: null, productTypeId: null, imageId: null, whatsapp: '', status: 'draft', sort: 0 },
       types: { id, title: bi, fields: [] },
       variants: { id, productId: string(ref.products[0]?.id), sku: '', options: {}, specs: {}, images: [], priceUsd: null, warrantyMonths: null, condition: 'new', inventoryMode: 'quantity', active: true },
       collections: { id, slug: '', title: bi, description: bi, mode: 'manual', rules: { categories: [], brands: [], conditions: [], available: null, min: null, max: null }, productIds: [], published: false, sort: 0 },
@@ -1104,6 +1104,19 @@ export function CommerceCatalog({module}: {module: CatalogModule}) {
                       {text('sort', say('ترتيب الظهور', 'Sort order'), 'number')}
                       {choice('status', ['draft', 'published', 'archived'])}
                     </div>
+                    <label>
+                      <span>{say('رقم واتساب الفئة (اختياري)', 'Category WhatsApp number (optional)')}</span>
+                      <input
+                        type="tel"
+                        dir="ltr"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        value={string(edit.whatsapp)}
+                        onChange={e => set('whatsapp', e.target.value)}
+                        placeholder={say('771000511 أو 967771000511', '771000511 or 967771000511')}
+                      />
+                      <small className="text-muted">{say('يُضاف مفتاح اليمن تلقائيًا للرقم المحلي. اتركه فارغًا لاستخدام الرقم العام.', 'Yemen’s country code is added to local numbers. Leave blank to use the store number.')}</small>
+                    </label>
                     {Boolean(edit.imageId) && (
                       <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {(() => {

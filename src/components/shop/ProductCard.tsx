@@ -4,9 +4,11 @@ import type { Product } from '@/data/types';
 import { useLanguage } from '@/i18n/LanguageContext';
 import ProductImage from './ProductImage';
 import { calculateYer, formatPriceYer } from '@/lib/currency';
+import { whatsappPhoneForCategory } from '@/data/whatsapp';
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { site } = useCatalog();
+  const { site, categories } = useCatalog();
+  const whatsappPhone = whatsappPhoneForCategory(categories, product.category, site?.whatsapp);
   const exchangeRate = useExchangeRate();
   const { language, t } = useLanguage();
   const path = `/${language}/shop/${product.category}/${product.slug}`;
@@ -69,10 +71,10 @@ export default function ProductCard({ product }: { product: Product }) {
           </Link>
         </div>
         {product.price.updatedAt && <small>{product.price.updatedAt}</small>}
-        {site.whatsapp && (
+        {(categories.some(category => category.slug === product.category && category.whatsapp) || site.whatsapp) && (
           <a
             className="desk-text-link"
-            href={`https://wa.me/${site.whatsapp}?text=${encodeURIComponent(title)}`}
+            href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(title)}`}
             target="_blank"
             rel="noreferrer"
           >

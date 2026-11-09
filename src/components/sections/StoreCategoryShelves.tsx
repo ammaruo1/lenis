@@ -248,7 +248,7 @@ export default function StoreCategoryShelves() {
                   const titleText = product.title[language] || product.title.ar || product.model;
                   const condition = conditionText(offer?.condition, language);
                   const priceYer = formatPriceYer(calculateYer(offer?.priceUsd, rate, offer?.priceYer), language);
-                  const wasPrice = offer?.originalPriceUsd && Number(offer.originalPriceUsd) > Number(offer.priceUsd ?? 0)
+                  const wasPrice = offer?.discountSource && offer.originalPriceUsd && Number(offer.originalPriceUsd) > Number(offer.priceUsd ?? 0)
                     ? offer.originalPriceUsd
                     : null;
                   const href = `/${language}/shop/${product.category}/${product.slug}`;
@@ -258,7 +258,7 @@ export default function StoreCategoryShelves() {
                       <Link to={href} className="store-product-image" aria-label={titleText}>
                         {image ? <img src={image} alt={titleText} loading="lazy" /> : <Icon size={48} strokeWidth={1.25} aria-hidden="true" />}
                         {condition && <span className="store-product-condition">{condition}</span>}
-                        {offer?.originalPriceUsd && offer.priceUsd && Number(offer.originalPriceUsd) > Number(offer.priceUsd) && offer.discountPercent ? (
+                        {offer?.discountSource && offer.originalPriceUsd && offer.priceUsd && Number(offer.originalPriceUsd) > Number(offer.priceUsd) && offer.discountPercent ? (
                           <span className="store-product-discount">-{offer.discountPercent}%</span>
                         ) : null}
                       </Link>

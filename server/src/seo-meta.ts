@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyRequest } from 'fastify';
 import type { AppConfig } from './config.js';
+import { catalogSearch } from './commerce-catalog.js';
 import { readFileSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -8,6 +9,7 @@ export interface PageMeta {
   title: string;
   description: string;
   imageUrl: string;
+  imageAlt?: string;
   canonicalUrl: string;
   type: 'website' | 'product';
   siteName: string;
@@ -51,8 +53,8 @@ export const YEMEN_STORE_INFO = {
   telephone: '+967771001044',
   addressLocalityAr: 'صنعاء',
   addressLocalityEn: "Sana'a",
-  streetAddressAr: 'شارع صخر، بالقرب من مركز تقنية المعلومات',
-  streetAddressEn: 'Sakhr Street, near IT Center',
+  streetAddressAr: 'منتصف شارع صخر',
+  streetAddressEn: 'Mid-Sakhr Street',
   addressRegion: 'أمانة العاصمة',
   addressCountry: 'YE',
   latitude: 15.3694,
@@ -216,6 +218,61 @@ function getSchemaCondition(c: string | undefined | null): string {
   }
 }
 
+function getShopFilterSummary(searchParams: URLSearchParams, isAr: boolean): string {
+  const labels: string[] = [];
+  const add = (key: string, label: (value: string) => string) => {
+    for (const raw of searchParams.getAll(key)) {
+      for (const value of raw.split(',').map(item => item.trim()).filter(Boolean)) {
+        labels.push(label(value));
+      }
+    }
+  };
+
+  add('brand', value => value);
+  add('condition', value => `${isAr ? 'الحالة' : 'Condition'} ${formatCondition(value, isAr)}`);
+  add('cpuFamily', value => `${isAr ? 'معالج' : 'CPU'} ${value}`);
+  add('cpuBrand', value => value);
+  add('cpuGen', value => `${isAr ? 'الجيل' : 'Gen'} ${value}`);
+  add('ramGB', value => `${value} GB RAM`);
+  add('storageGB', value => `${Number(value) >= 1000 ? `${Number(value) / 1000} TB` : `${value} GB`} SSD`);
+  add('gpuType', value => value === 'dedicated' ? (isAr ? 'كرت شاشة منفصل' : 'Dedicated graphics') : (isAr ? 'كرت شاشة مدمج' : 'Integrated graphics'));
+  add('screenSize', value => `${value}\"`);
+  if (searchParams.get('touch') === 'true') labels.push(isAr ? 'شاشة لمس' : 'Touchscreen');
+  if (searchParams.get('available') === 'true') labels.push(isAr ? 'متوفر الآن' : 'In stock');
+
+  const min = searchParams.get('min');
+  const max = searchParams.get('max');
+  if (min || max) {
+    labels.push(isAr
+      ? `السعر ${min ? `من $${min}` : ''}${min && max ? ' إلى ' : ''}${max ? `حتى $${max}` : ''}`
+      : `Price ${min ? `from $${min}` : ''}${min && max ? ' to ' : ''}${max ? `up to $${max}` : ''}`);
+  }
+
+  const specNames: Record<string, { ar: string; en: string }> = {
+    sizeType: { ar: 'نوع الجهاز', en: 'Device type' },
+    resolution: { ar: 'الدقة', en: 'Resolution' },
+    refreshHz: { ar: 'معدل التحديث', en: 'Refresh rate' },
+    panel: { ar: 'نوع اللوحة', en: 'Panel' },
+    curved: { ar: 'شكل الشاشة', en: 'Screen shape' },
+    feature: { ar: 'الميزة', en: 'Feature' },
+    deviceType: { ar: 'نوع القطعة', en: 'Device type' },
+    ddrGen: { ar: 'جيل الذاكرة', en: 'Memory generation' },
+    speedMhz: { ar: 'السرعة', en: 'Speed' },
+    storageType: { ar: 'نوع التخزين', en: 'Storage type' },
+    accessoryType: { ar: 'نوع الملحق', en: 'Accessory type' },
+    wifiGen: { ar: 'معيار Wi-Fi', en: 'Wi-Fi standard' },
+    printerType: { ar: 'نوع الطابعة', en: 'Printer type' },
+    audioType: { ar: 'نوع الصوت', en: 'Audio type' },
+  };
+  for (const [key, value] of searchParams.entries()) {
+    if (!key.startsWith('spec_')) continue;
+    const name = specNames[key.slice(5)];
+    labels.push(name ? `${name[isAr ? 'ar' : 'en']}: ${value}` : value);
+  }
+
+  return labels.slice(0, 3).join(isAr ? '، ' : ', ');
+}
+
 // In-memory cache for resolved metadata (60s TTL)
 interface MetaCacheEntry {
   meta: PageMeta;
@@ -229,7 +286,13 @@ export async function resolveSeoMeta(
   baseUrl: string
 ): Promise<PageMeta> {
   const normalizedPath = path.split('?')[0].replace(/\/+$/, '') || '/';
-  const cacheKey = `${baseUrl}|${normalizedPath}`;
+  const searchParams = new URL(path, baseUrl).searchParams;
+  const relevantSearch = [...searchParams.entries()]
+    .filter(([key]) => !['page', 'sort', 'focusSearch'].includes(key))
+    .sort(([aKey, aValue], [bKey, bValue]) => aKey.localeCompare(bKey) || aValue.localeCompare(bValue))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&');
+  const cacheKey = `${baseUrl}|${normalizedPath}${relevantSearch ? `?${relevantSearch}` : ''}`;
   const cached = metaCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.meta;
@@ -360,14 +423,14 @@ export async function resolveSeoMeta(
         }
         const imageUrl = allImages[0] || defaultLogo;
 
-        // Optimized Titles and Descriptions targeting Yemen & Governorates Search
+        const productDetails = descParts.filter(Boolean).join(' | ');
         const pageTitle = isAr
-          ? `${prodTitle} في اليمن — مواصفات وسعر | ${siteName} صنعاء`
-          : `${prodTitle} in Yemen — Price & Specs | ${siteName} Sana'a`;
+          ? `${prodTitle} | ${siteName} — صنعاء`
+          : `${prodTitle} | ${siteName}, Sana'a`;
 
         const pageDescription = isAr
-          ? `${prodTitle} في اليمن: ${descParts.join(' | ')}. فحص فني شامل وضمان معتمد مع توصيل فوري في صنعاء وشحن لكافة المحافظات اليمنية (عدن، تعز، حضرموت، إب، ذمار، مأرب، الحديدة، وباقي المدن).`
-          : `${prodTitle} in Yemen: ${descParts.join(' | ')}. Certified inspection and official warranty. Express delivery in Sana'a and shipping across all Yemeni governorates (Aden, Taiz, Hadhramaut, Ibb, Marib, etc.).`;
+          ? `${prodTitle} من متجر ${siteName} في صنعاء، اليمن. ${productDetails ? `${productDetails}. ` : ''}متجرنا في منتصف شارع صخر، مع توصيل وشحن إلى المحافظات.`
+          : `${prodTitle} from ${siteName} in Sana'a, Yemen. ${productDetails ? `${productDetails}. ` : ''}Visit us on Mid-Sakhr Street. Delivery and shipping are available across the governorates.`;
 
         const keywords = [
           prodTitle,
@@ -426,6 +489,7 @@ export async function resolveSeoMeta(
           title: pageTitle,
           description: pageDescription,
           imageUrl,
+          imageAlt: prodTitle,
           canonicalUrl,
           alternateUrls,
           type: 'product',
@@ -546,13 +610,81 @@ export async function resolveSeoMeta(
 
     // ── 5. Category Page ───────────────────────────────────────────────────
     if (!result) {
-      const catMatch = subPath.match(/^\/shop\/([^/?#]+)\/?$/) || (subPath === '/laptops' ? [null, 'laptops'] : null);
+      const catMatch = subPath.match(/^\/shop\/([^/?#]+)\/?$/)
+        || (subPath === '/shop' && searchParams.get('category') ? [null, searchParams.get('category')!] : null)
+        || (subPath === '/laptops' ? [null, 'laptops'] : null);
       if (catMatch) {
         const catSlug = decodeURIComponent(catMatch[1]);
         const cat = await db.catalogCategory.findUnique({ where: { slug: catSlug } }).catch(() => null);
         const catTitle = cat
           ? (typeof cat.title === 'object' && cat.title ? (isAr ? (cat.title as any).ar : (cat.title as any).en) || catSlug : catSlug)
           : (catSlug === 'laptops' ? (isAr ? 'أجهزة لابتوب' : 'Laptops') : catSlug);
+        const categoryName = catSlug === 'displays-projectors'
+          ? (isAr ? 'أجهزة العرض والبروجكتورات' : 'Projectors')
+          : catTitle;
+        const filterSummary = getShopFilterSummary(searchParams, isAr);
+        const searchTerm = searchParams.get('q')?.trim();
+        const pageTitle = filterSummary
+          ? `${categoryName} — ${filterSummary} في ${isAr ? 'صنعاء' : "Sana'a"} | ${siteName}`
+          : searchTerm
+            ? (isAr ? `نتائج «${searchTerm}» في ${categoryName} بصنعاء | ${siteName}` : `“${searchTerm}” in ${categoryName} in Sana'a | ${siteName}`)
+            : (isAr ? `أفضل ${categoryName} في صنعاء | ${siteName}` : `${categoryName} in Sana'a | ${siteName}`);
+        const pageDescription = filterSummary
+          ? (isAr
+            ? `تصفح ${categoryName} حسب المواصفات المختارة: ${filterSummary}، من متجر ${siteName} في صنعاء، اليمن. موقعنا في منتصف شارع صخر.`
+            : `Browse ${categoryName} by selected specifications: ${filterSummary}, from ${siteName} in Sana'a, Yemen. Visit us on Mid-Sakhr Street.`)
+          : searchTerm
+            ? (isAr ? `نتائج البحث عن «${searchTerm}» ضمن ${categoryName} في صنعاء، اليمن. متجر الجيل العربي الرقمي، منتصف شارع صخر.` : `Search results for “${searchTerm}” in ${categoryName}, Sana'a, Yemen. Al-Jeel Digital, Mid-Sakhr Street.`)
+            : (isAr
+              ? `تصفح أفضل ${categoryName} من متجر ${siteName} في صنعاء، اليمن. قارن الأنواع والمواصفات، وزرنا في منتصف شارع صخر.`
+              : `Browse ${categoryName} at ${siteName} in Sana'a, Yemen. Compare available types and specifications. Visit us on Mid-Sakhr Street.`);
+
+        const catalogParams = new URLSearchParams(searchParams);
+        catalogParams.set('category', searchParams.has('q') ? (searchParams.get('category') || catSlug) : catSlug);
+        const filteredCatalog = await catalogSearch(db, catalogParams);
+        const firstProduct = filteredCatalog.items[0];
+        const firstOfferImage = firstProduct?.offers.find(offer => offer.images.length)?.images[0];
+        const firstProductImage = firstOfferImage || firstProduct?.product.images[0];
+        const categoryImage = cat && typeof cat.imageId === 'string'
+          ? await db.mediaAsset.findUnique({ where: { id: cat.imageId }, select: { originalPath: true } })
+          : null;
+        const rawPreviewImage = firstProductImage || categoryImage?.originalPath;
+        const previewImage = rawPreviewImage
+          ? (rawPreviewImage.startsWith('http') ? rawPreviewImage : `${baseUrl}${rawPreviewImage.startsWith('/') ? '' : '/'}${rawPreviewImage}`)
+          : defaultLogo;
+        const firstProductTitle = firstProduct
+          ? String((firstProduct.product.title as Record<string, unknown>)[lang] || (firstProduct.product.title as Record<string, unknown>).ar || '')
+          : '';
+        const itemListSchema = {
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          numberOfItems: filteredCatalog.total,
+          itemListElement: filteredCatalog.items.slice(0, 10).map((item, index) => {
+            const productTitle = String((item.product.title as Record<string, unknown>)[lang] || (item.product.title as Record<string, unknown>).ar || item.product.model);
+            const image = item.offers.find(offer => offer.images.length)?.images[0] || item.product.images[0];
+            return {
+              '@type': 'ListItem',
+              position: index + 1,
+              item: {
+                '@type': 'Product',
+                name: productTitle,
+                description: String((item.product.summary as Record<string, unknown>)[lang] || (item.product.summary as Record<string, unknown>).ar || ''),
+                brand: { '@type': 'Brand', name: item.product.brand },
+                url: `${baseUrl}/${lang}/shop/${item.product.category}/${item.product.slug}`,
+                ...(image ? { image: image.startsWith('http') ? image : `${baseUrl}${image.startsWith('/') ? '' : '/'}${image}` } : {}),
+                ...(item.offers.find(offer => offer.priceUsd !== null) ? {
+                  offers: {
+                    '@type': 'Offer',
+                    priceCurrency: 'USD',
+                    price: item.offers.find(offer => offer.priceUsd !== null)!.priceUsd,
+                    availability: item.offers.some(offer => offer.available) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+                    url: `${baseUrl}/${lang}/shop/${item.product.category}/${item.product.slug}`,
+                  },
+                } : {}),
+              },
+            };
+          }),
+        };
 
         const canonicalUrl = `${baseUrl}/${lang}/shop/${catSlug}`;
         const sellerSchema = createSellerSchema(baseUrl, isAr);
@@ -565,19 +697,16 @@ export async function resolveSeoMeta(
         const collectionSchema = {
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
-          name: `${catTitle} في اليمن`,
-          description: isAr
-            ? `تصفح أحدث أجهزة ${catTitle} الأصلية مع فحص فني دقيق وضمان معتمد في اليمن، وتوصيل لكافة المحافظات: صنعاء، عدن، تعز، حضرموت، إب، ذمار، مأرب.`
-            : `Certified ${catTitle} in Yemen with verified warranty and delivery across all Yemeni governorates.`,
+          name: pageTitle,
+          description: pageDescription,
           url: canonicalUrl,
         };
 
         result = {
-          title: isAr ? `${catTitle} في اليمن — أسعار ومواصفات | ${siteName} صنعاء` : `${catTitle} in Yemen — Prices & Specs | ${siteName} Sana'a`,
-          description: isAr
-            ? `تصفح أحدث أجهزة ${catTitle} الأصلية في اليمن مع فحص فني دقيق وضمان معتمد لدى الجيل العربي الرقمي. توصيل فوري في صنعاء وشحن آمن لكافة المحافظات (عدن، تعز، حضرموت، إب، ذمار، مأرب).`
-            : `Browse certified ${catTitle} in Yemen with rigorous technical inspection and warranty at Al-Jeel Digital. Shipping to all governorates.`,
-          imageUrl: defaultLogo,
+          title: pageTitle,
+          description: pageDescription,
+          imageUrl: previewImage,
+          imageAlt: firstProductTitle || categoryName,
           canonicalUrl,
           alternateUrls,
           type: 'website',
@@ -592,7 +721,7 @@ export async function resolveSeoMeta(
             'متجر كمبيوتر اليمن',
             siteName,
           ],
-          structuredData: [collectionSchema, breadcrumbs, sellerSchema],
+          structuredData: [collectionSchema, itemListSchema, breadcrumbs, sellerSchema],
         };
       }
     }
@@ -609,7 +738,7 @@ export async function resolveSeoMeta(
       const collectionSchema = {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: isAr ? 'متجر الإلكترونيات واللابتوبات في اليمن' : 'Electronics & Laptop Store in Yemen',
+          name: isAr ? 'متجر الإلكترونيات واللابتوبات في صنعاء' : "Electronics & Laptop Store in Sana'a",
         description: isAr
           ? 'المتجر الإلكتروني الشامل لأجهزة اللابتوب ومعدات تقنية المعلومات في اليمن. فحص فني وضمان حقيقي مع توصيل وشحن لكافة المحافظات.'
           : 'Premier online laptop and IT equipment store in Yemen with nationwide shipping.',
@@ -725,7 +854,7 @@ export function injectSeoMeta(templateHtml: string, meta: PageMeta): string {
     <meta property="og:url" content="${escapeHtml(meta.canonicalUrl)}" />
     <meta property="og:image" content="${escapeHtml(meta.imageUrl)}" />
     <meta property="og:image:secure_url" content="${escapeHtml(meta.imageUrl)}" />
-    <meta property="og:image:alt" content="${escapeHtml(meta.title)}" />
+    <meta property="og:image:alt" content="${escapeHtml(meta.imageAlt || meta.title)}" />
     <meta property="og:locale" content="${meta.locale}" />
 
     <!-- Twitter Card -->

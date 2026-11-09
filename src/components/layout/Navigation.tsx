@@ -866,7 +866,7 @@ export default function Navigation() {
                     <>
                       {headerSearchFilter !== 'categories' && headerSuggestions.items.slice(0, 6).map(item => (
                         <button key={`${item.category}-${item.value}`} type="button" className="header-search-result" onClick={() => { navigate(`/${language}/shop?q=${encodeURIComponent(item.value)}&category=${encodeURIComponent(item.category)}`); setHeaderSearchOpen(false) }}>
-                          <Search size={15} /><span>{item.value}</span><small>{item.categoryTitle}</small>
+                          <Search size={15} /><span>{item.value}</span><small>{item.categoryTitle}{item.sku ? ` · SKU ${item.sku}` : ''}</small>
                         </button>
                       ))}
                       {headerSearchFilter !== 'products' && headerSuggestions.categories.map(item => (

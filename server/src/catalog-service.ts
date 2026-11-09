@@ -13,7 +13,7 @@ export function productDto(p:Row,admin=false){
   const available=variants.some(v=>v.inventoryReviewed&&(v.inventoryMode==='quantity'?v.quantity>0:v.units.some(u=>u.available)));
   const publicUsdNum=publicUsd===null?null:Number(publicUsd);
   const origColumn=p.originalPriceUsd?Number(p.originalPriceUsd):null;
-  const origUsd=origColumn&&publicUsdNum&&origColumn>publicUsdNum?origColumn:null;
+  const origUsd=admin&&origColumn&&publicUsdNum&&origColumn>publicUsdNum?origColumn:null;
   const discPct=origUsd&&publicUsdNum?Math.round(((origUsd-publicUsdNum)/origUsd)*100):null;
   return {id:p.id,slug:p.slug,category:p.category,brand:p.brand?.name??'',model:p.model,title:p.title,summary:p.summary,condition:p.condition,warrantyMonths:p.warrantyMonths,
     price:{

@@ -53,10 +53,13 @@ async function proxyRequest(request, reply) {
     if (val !== undefined) headers[key] = Array.isArray(val) ? val.join(', ') : val;
   }
   headers['accept-encoding'] = 'identity';
-  // Production CSRF allows only ALLOWED_ORIGINS (alarabiye.com), not localhost.
-  if (request.url.startsWith('/api/admin')) {
+  // Production CSRF allows ALLOWED_ORIGINS (alarabiye.com), not localhost.
+  // Rewrite the local preview origin for both admin and customer account/cart mutations.
+  if (request.url.startsWith('/api/admin') || request.url.startsWith('/api/shop')) {
     headers.origin = UPSTREAM_ORIGIN;
-    headers.referer = `${UPSTREAM_ORIGIN}/admin/`;
+    headers.referer = request.url.startsWith('/api/admin')
+      ? `${UPSTREAM_ORIGIN}/admin/`
+      : `${UPSTREAM_ORIGIN}/ar/shop`;
   }
 
   const body = await readBody(request);

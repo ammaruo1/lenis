@@ -39,13 +39,15 @@ export async function commerceRoutes(app:FastifyInstance,db:PrismaClient,config:
     const slug=z.string().max(160).parse((request.params as {slug:string}).slug);
     const category=z.object({category:z.string().max(100).optional()}).parse(request.query).category;
     const cache=await publishedRows(db);
-    const {rows}=cache;
+    const {rows,entries}=cache;
     let selected=rows.filter(v=>v.product.slug===slug);
     if(category){const redirect=await db.productRedirect.findUnique({where:{path:category+'/'+slug}});if(redirect)selected=rows.filter(v=>v.productId===redirect.productId);}
     if(!selected.length){const redirects=await db.productRedirect.findMany({where:{path:{endsWith:'/'+slug}}});selected=rows.filter(v=>redirects.some(r=>r.productId===v.productId));}
     if(!selected.length)throw new ApiError(404,'not_found');
     const pricing=await db.pricingConfig.findUnique({where:{id:1}});
-    return {product:productDto(selected[0].product),brandId:selected[0].product.brandId,offers:selected.flatMap(offers).map(o=>({...o,priceYer:priceInYer(o.priceUsd,pricing?.usdToYer),originalPriceYer:priceInYer(o.originalPriceUsd??null,pricing?.usdToYer)})),fields:await effectiveFields(db,selected[0].product)};
+    const selectedIds=new Set(selected.map(v=>v.id));
+    const selectedEntries=entries.filter(e=>selectedIds.has(e.v.id));
+    return {product:productDto(selected[0].product),brandId:selected[0].product.brandId,offers:selectedEntries.map(e=>({...e.o,priceYer:priceInYer(e.o.priceUsd,pricing?.usdToYer),originalPriceYer:priceInYer(e.o.originalPriceUsd??null,pricing?.usdToYer)})),fields:await effectiveFields(db,selected[0].product)};
   });
   app.get('/api/shop/packages',async(_request,reply)=>{
     reply.header('Cache-Control','public, max-age=15, stale-while-revalidate=45');
@@ -244,7 +246,11 @@ export async function commerceRoutes(app:FastifyInstance,db:PrismaClient,config:
     store.get('/orders/:id',async request=>{
       const c=await customer(request),order=await db.commerceOrder.findFirst({where:{id:(request.params as {id:string}).id,customerId:c!.id}});if(!order)throw new ApiError(404,'not_found');
       const pricing=await db.pricingConfig.findUnique({where:{id:1}});
-      return {order,whatsapp:pricing?.whatsapp??null};
+      const orderItems=Array.isArray(order.items)?order.items as {category?:unknown}[]:[];
+      const categories=[...new Set(orderItems.map(item=>item.category).filter((slug):slug is string=>typeof slug==='string'))];
+      const allItemsTagged=orderItems.length>0&&orderItems.every(item=>typeof item.category==='string');
+      const category=allItemsTagged&&categories.length===1?await db.catalogCategory.findUnique({where:{slug:categories[0]},select:{whatsapp:true}}):null;
+      return {order,whatsapp:category?.whatsapp??pricing?.whatsapp??null};
     });
     store.post('/orders/:id/cancel',async request=>{
       const c=await customer(request),id=(request.params as {id:string}).id;

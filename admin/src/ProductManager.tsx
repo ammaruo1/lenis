@@ -15,12 +15,12 @@ import { VisualCategoryPickerModal } from './VisualCategoryPickerModal';
 import { AmazonImageModal } from './AmazonImageModal';
 
 type Ref = {
-  products: { id: string; title: { ar: string; en: string } }[];
+  products: { id: string; title: { ar: string; en: string }; model: string; brandId: string; category: string; productTypeId: string | null; status: string; condition?: string; specs?: Record<string, unknown> }[];
   brands: { id: string; name: string; published: boolean }[];
   categories: { slug: string; parentSlug: string | null; productTypeId: string | null; title: { ar: string; en: string } }[];
   types: { id: string; title: { ar: string; en: string }; fields: SpecFieldInput[] }[];
-  variants: { id: string; productId: string; active: boolean; specs: Record<string, unknown>; options: Record<string, unknown> }[];
-  collections: { id: string; title: { ar: string; en: string } }[];
+  variants: { id: string; productId: string; active: boolean; condition: string; inventoryMode: string; availabilityMode: string; inventoryReviewed: boolean; quantity: number; priceUsd: string | null; specs: Record<string, unknown>; options: Record<string, unknown>; units?: { available: boolean }[] }[];
+  collections: { id: string; title: { ar: string; en: string }; products: { productId: string }[] }[];
 };
 type Media = { id: string; originalPath: string; altAr: string; altEn: string };
 
@@ -866,8 +866,8 @@ export default function ProductManager() {
   const [debouncedQ, setDebouncedQ] = useState('');
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
-  const [catFilter, setCatFilter] = useState('');
-  const [brandFilter, setBrandFilter] = useState('');
+  const [filters, setFilters] = useState(() => new URLSearchParams());
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [sort, setSort] = useState('updated');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -899,28 +899,18 @@ export default function ProductManager() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  const filterQuery = filters.toString();
   const products = useQuery({
-    queryKey: ['catalog-products', debouncedQ, page, status, sort],
+    queryKey: ['catalog-products', debouncedQ, page, status, sort, filterQuery],
     queryFn: () => api<{ items: ProductEdit[]; total: number }>(
-      '/commerce/products?q=' + encodeURIComponent(debouncedQ) + '&page=' + page + '&sort=' + sort + (status ? '&status=' + status : '')
+      '/commerce/products?q=' + encodeURIComponent(debouncedQ) + '&page=' + page + '&sort=' + sort + (status ? '&status=' + status : '') + (filterQuery ? '&' + filterQuery : '')
     ),
     placeholderData: keepPreviousData,
   });
   const ref = useQuery({ queryKey: ['commerce-reference'], queryFn: () => api<Ref>('/commerce/reference'), staleTime: 30_000, gcTime: 5 * 60_000 });
   const media = useQuery({ queryKey: ['media'], queryFn: () => api<{ items: Media[] }>('/media'), staleTime: 60_000, gcTime: 5 * 60_000 });
 
-  // Client-side category and brand filtering if selected
-  const displayedItems = useMemo(() => {
-    if (!products.data?.items) return [];
-    return products.data.items.filter(p => {
-      if (catFilter && p.category !== catFilter) return false;
-      if (brandFilter) {
-        const brandObj = ref.data?.brands.find(b => b.id === brandFilter);
-        if (p.brandId !== brandFilter && p.brand !== brandObj?.name) return false;
-      }
-      return true;
-    });
-  }, [products.data?.items, catFilter, brandFilter, ref.data?.brands]);
+  const displayedItems = products.data?.items ?? [];
 
   // Only show full loading spinner when initial data has not loaded yet
   const isInitialLoading = (!products.data && products.isPending) || (!ref.data && ref.isPending) || (!media.data && media.isPending);
@@ -928,6 +918,110 @@ export default function ProductManager() {
   if (!products.data || !ref.data || !media.data) return <ErrorBox code="disconnected" />;
 
   const data = ref.data;
+  const selectedFilterValues = (key: string) => filters.getAll(key).flatMap(value => value.split(',')).filter(Boolean);
+  const filterSelected = (key: string, value: string) => selectedFilterValues(key).includes(value);
+  const toggleFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(filters);
+    const values = selectedFilterValues(key);
+    next.delete(key);
+    (values.includes(value) ? values.filter(item => item !== value) : [...values, value]).forEach(item => next.append(key, item));
+    setFilters(next);
+    setPage(1);
+  };
+  const setFilterValue = (key: string, value: string) => {
+    const next = new URLSearchParams(filters);
+    if (value) next.set(key, value); else next.delete(key);
+    setFilters(next);
+    setPage(1);
+  };
+  const clearShopFilters = () => { setFilters(new URLSearchParams()); setPage(1); };
+  const activeFilterCount = [...filters.keys()].reduce((count, key) => count + (key === 'available' ? 1 : selectedFilterValues(key).length), 0);
+  const variantsByProduct = new Map<string, Ref['variants']>();
+  for (const variant of data.variants) {
+    const items = variantsByProduct.get(variant.productId) ?? [];
+    items.push(variant);
+    variantsByProduct.set(variant.productId, items);
+  }
+  const categoryFacets = data.categories.map(category => ({
+    ...category,
+    count: data.products.filter(product => product.category === category.slug).length
+  })).filter(category => category.count > 0);
+  const brandFacets = data.brands.map(brand => ({
+    ...brand,
+    count: data.products.filter(product => product.brandId === brand.id).length
+  })).filter(brand => brand.count > 0).sort((a, b) => b.count - a.count);
+  const conditionCounts = new Map<string, Set<string>>();
+  for (const product of data.products) {
+    for (const variant of variantsByProduct.get(product.id) ?? []) {
+      if (!variant.active) continue;
+      const productsForCondition = conditionCounts.get(variant.condition) ?? new Set<string>();
+      productsForCondition.add(product.id);
+      conditionCounts.set(variant.condition, productsForCondition);
+    }
+    const condition = product.condition;
+    if (condition) {
+      const productsForCondition = conditionCounts.get(condition) ?? new Set<string>();
+      productsForCondition.add(product.id);
+      conditionCounts.set(condition, productsForCondition);
+    }
+  }
+  const conditionLabels: Record<string, {ar: string; en: string}> = {
+    new: {ar: 'جديد', en: 'New'}, open_box: {ar: 'مفتوح الكرتون', en: 'Open box'}, like_new: {ar: 'شبه جديد', en: 'Like new'},
+    refurbished: {ar: 'مجدّد', en: 'Refurbished'}, used: {ar: 'مستعمل', en: 'Used'}, defective: {ar: 'معيوب / تصفية', en: 'Defective'},
+    A: {ar: 'فئة A', en: 'Grade A'}, B: {ar: 'فئة B', en: 'Grade B'}, C: {ar: 'فئة C', en: 'Grade C'}
+  };
+  const conditionFacets = [...conditionCounts].map(([value, products]) => ({value, count: products.size, label: conditionLabels[value]?.[lang] ?? value}));
+  const specCounts = new Map<string, Map<string, Set<string>>>();
+  const specDefinitions = new Map<string, SpecFieldInput>();
+  for (const type of data.types) for (const field of type.fields) if (field.filterable) specDefinitions.set(field.key, field);
+  const filterValues = (value: unknown): string[] => {
+    if (value === null || value === undefined || value === '') return [];
+    if (Array.isArray(value)) return value.flatMap(filterValues);
+    if (typeof value === 'boolean') return [String(value)];
+    if (typeof value === 'string' || typeof value === 'number') return [String(value)];
+    return [];
+  };
+  for (const product of data.products) {
+    const productVariants = (variantsByProduct.get(product.id) ?? []).filter(variant => variant.active);
+    for (const key of specDefinitions.keys()) {
+      const values = new Set([
+        ...filterValues(product.specs?.[key]),
+        ...productVariants.flatMap(variant => [...filterValues(variant.specs[key]), ...filterValues(variant.options[key])])
+      ]);
+      if (!values.size) continue;
+      const facetValues = specCounts.get(key) ?? new Map<string, Set<string>>();
+      for (const value of values) {
+        const productIds = facetValues.get(value) ?? new Set<string>();
+        productIds.add(product.id);
+        facetValues.set(value, productIds);
+      }
+      specCounts.set(key, facetValues);
+    }
+  }
+  const specFacets = [...specDefinitions].map(([key, field]) => ({
+    key,
+    title: field.title[lang] || field.title.ar || key,
+    unit: field.unit,
+    values: [...(specCounts.get(key) ?? new Map<string, Set<string>>())].map(([value, ids]) => ({value, count: ids.size})).sort((a, b) => b.count - a.count).slice(0, 18)
+  })).filter(field => field.values.length).sort((a, b) => b.values.reduce((n, item) => n + item.count, 0) - a.values.reduce((n, item) => n + item.count, 0));
+  const collectionFacets = data.collections.map(item => ({
+    ...item,
+    count: new Set(item.products.map(product => product.productId)).size
+  })).filter(item => item.count > 0);
+  const selectedLabels = (key: string, value: string) => {
+    if (key === 'category') return localized(data.categories.find(item => item.slug === value)?.title, lang) || value;
+    if (key === 'brand') return data.brands.find(item => item.id === value)?.name || value;
+    if (key === 'condition') return conditionLabels[value]?.[lang] || value;
+    if (key === 'collection') return localized(data.collections.find(item => item.id === value)?.title, lang) || value;
+    if (key.startsWith('spec_')) {
+      const field = specDefinitions.get(key.slice(5));
+      return `${field?.title[lang] || field?.title.ar || key.slice(5)}: ${value}`;
+    }
+    if (key === 'available') return say('متوفر الآن', 'In stock now');
+    if (key === 'min') return `${say('من', 'Min')} $${value}`;
+    if (key === 'max') return `${say('إلى', 'Max')} $${value}`;
+    return value;
+  };
   let typeId = edit?.productTypeId, slug = edit?.category;
   const seen = new Set<string>();
   while (!typeId && slug && !seen.has(slug)) {
@@ -1080,12 +1174,11 @@ export default function ProductManager() {
     setSearchInput('');
     setDebouncedQ('');
     setStatus('');
-    setCatFilter('');
-    setBrandFilter('');
+    setFilters(new URLSearchParams());
     setPage(1);
   };
 
-  const hasActiveFilters = Boolean(searchInput || debouncedQ || status || catFilter || brandFilter);
+  const hasActiveFilters = Boolean(searchInput || debouncedQ || status || activeFilterCount);
 
   return (
     <div className="product-manager-view">
@@ -1185,34 +1278,16 @@ export default function ProductManager() {
                 ))}
               </div>
 
-              {/* Filters Dropdowns Group */}
-              <div className="filters-dropdowns-group">
-                {/* Category Quick Filter */}
-                <select
-                  aria-label={say('الفئة', 'Category')}
-                  value={catFilter}
-                  onChange={e => setCatFilter(e.target.value)}
-                  className="control-select"
-                >
-                  <option value="">{say('كل الفئات', 'All Categories')}</option>
-                  {data.categories.map(c => (
-                    <option key={c.slug} value={c.slug}>{c.title[lang]}</option>
-                  ))}
-                </select>
-
-                {/* Brand Quick Filter */}
-                <select
-                  aria-label={say('العلامة التجارية', 'Brand')}
-                  value={brandFilter}
-                  onChange={e => setBrandFilter(e.target.value)}
-                  className="control-select"
-                >
-                  <option value="">{say('كل العلامات', 'All Brands')}</option>
-                  {data.brands.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
+              <button
+                type="button"
+                className={`product-shop-filter-trigger${activeFilterCount ? ' active' : ''}`}
+                aria-expanded={filtersOpen}
+                onClick={() => setFiltersOpen(value => !value)}
+              >
+                <SlidersHorizontal size={15} />
+                <span>{say('الفلاتر', 'Filters')}</span>
+                {activeFilterCount > 0 && <b>{activeFilterCount}</b>}
+              </button>
 
               {/* Sort & View Switcher Row */}
               <div className="sort-view-row">
@@ -1249,6 +1324,93 @@ export default function ProductManager() {
                   </button>
                 </div>
               </div>
+
+              {filtersOpen && (
+                <div className="product-shop-filter-panel">
+                  <header>
+                    <strong>{say('فلاتر الكتالوج', 'Catalog filters')}</strong>
+                    {activeFilterCount > 0 && <button type="button" onClick={clearShopFilters}>{say('مسح الكل', 'Clear all')}</button>}
+                  </header>
+                  <label className={`product-filter-stock${filters.get('available') === 'true' ? ' selected' : ''}`}>
+                    <input type="checkbox" checked={filters.get('available') === 'true'} onChange={event => setFilterValue('available', event.target.checked ? 'true' : '')} />
+                    <span>{say('متوفر الآن', 'In stock now')}</span>
+                  </label>
+                  <label className={`product-filter-stock${filters.get('available') === 'true' ? ' selected' : ''}`}>
+                    <input type="checkbox" checked={filters.get('available') === 'true'} onChange={event => setFilterValue('available', event.target.checked ? 'true' : '')} />
+                    <span>{say('متوفر الآن', 'In stock now')}</span>
+                  </label>
+                  <section className="product-filter-group">
+                    <h3>{say('الفئات', 'Categories')}</h3>
+                    <div className="product-filter-options chips">
+                      {categoryFacets.map(item => <label key={item.slug} className={filterSelected('category', item.slug) ? 'selected' : ''}>
+                        <input type="checkbox" checked={filterSelected('category', item.slug)} onChange={() => toggleFilter('category', item.slug)} />
+                        <span>{localized(item.title, lang)}</span><small>{item.count}</small>
+                      </label>)}
+                    </div>
+                  </section>
+                  <section className="product-filter-group">
+                    <h3>{say('العلامة التجارية', 'Brand')}</h3>
+                    <div className="product-filter-options chips">
+                      {brandFacets.slice(0, 40).map(item => <label key={item.id} className={filterSelected('brand', item.id) ? 'selected' : ''}>
+                        <input type="checkbox" checked={filterSelected('brand', item.id)} onChange={() => toggleFilter('brand', item.id)} />
+                        <span>{item.name}</span><small>{item.count}</small>
+                      </label>)}
+                    </div>
+                  </section>
+                  <section className="product-filter-group">
+                    <h3>{say('الحالة', 'Condition')}</h3>
+                    <div className="product-filter-options">
+                      {conditionFacets.map(item => <label key={item.value}>
+                        <input type="checkbox" checked={filterSelected('condition', item.value)} onChange={() => toggleFilter('condition', item.value)} />
+                        <span>{item.label}</span><small>{item.count}</small>
+                      </label>)}
+                    </div>
+                  </section>
+                  <section className="product-filter-group">
+                    <h3>{say('السعر بالدولار', 'Price in USD')}</h3>
+                    <div className="product-filter-price-range">
+                      <label><span>{say('من', 'Min')}</span><input aria-label={say('السعر من', 'Minimum price')} type="number" min="0" placeholder="0" value={filters.get('min') ?? ''} onChange={event => setFilterValue('min', event.target.value)} /></label>
+                      <label><span>{say('إلى', 'Max')}</span><input aria-label={say('السعر إلى', 'Maximum price')} type="number" min="0" placeholder="∞" value={filters.get('max') ?? ''} onChange={event => setFilterValue('max', event.target.value)} /></label>
+                    </div>
+                  </section>
+                  {collectionFacets.length > 0 && <section className="product-filter-group">
+                    <h3>{say('المجموعات', 'Collections')}</h3>
+                    <div className="product-filter-options">
+                      {collectionFacets.map(item => <label key={item.id}>
+                        <input type="checkbox" checked={filterSelected('collection', item.id)} onChange={() => toggleFilter('collection', item.id)} />
+                        <span>{localized(item.title, lang)}</span><small>{item.count}</small>
+                      </label>)}
+                    </div>
+                  </section>}
+                  {specFacets.length > 0 && <section className="product-filter-group specs">
+                    <h3>{say('المواصفات', 'Specifications')}</h3>
+                    <div className="product-filter-spec-grid">
+                      {specFacets.map(field => <details key={field.key} open={selectedFilterValues(`spec_${field.key}`).length > 0}>
+                        <summary>{field.title}{field.unit ? ` (${field.unit})` : ''}</summary>
+                        <div className="product-filter-options">
+                          {field.values.map(item => <label key={item.value}>
+                            <input type="checkbox" checked={filterSelected(`spec_${field.key}`, item.value)} onChange={() => toggleFilter(`spec_${field.key}`, item.value)} />
+                            <span>{item.value === 'true' ? say('نعم', 'Yes') : item.value === 'false' ? say('لا', 'No') : item.value}</span><small>{item.count}</small>
+                          </label>)}
+                        </div>
+                      </details>)}
+                    </div>
+                  </section>}
+                </div>
+              )}
+
+              {activeFilterCount > 0 && (
+                <div className="product-active-filter-chips">
+                  {[...new Set([...filters.keys()])].flatMap(key => key === 'available'
+                    ? [{key, value: 'true'}]
+                    : selectedFilterValues(key).map(value => ({key, value}))).map(({key, value}) => (
+                    <button key={`${key}-${value}`} type="button" onClick={() => key === 'available' || key === 'min' || key === 'max' ? setFilterValue(key, '') : toggleFilter(key, value)}>
+                      <span>{selectedLabels(key, value)}</span><X size={12} />
+                    </button>
+                  ))}
+                  <button type="button" className="clear" onClick={clearShopFilters}><RotateCcw size={12} />{say('مسح الفلاتر', 'Clear filters')}</button>
+                </div>
+              )}
 
               {/* Reset Filters Button */}
               {hasActiveFilters && (

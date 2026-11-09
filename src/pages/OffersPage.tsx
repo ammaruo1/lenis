@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useCatalog, useExchangeRate } from '@/data/CatalogContext';
+import { whatsappPhoneForCategory } from '@/data/whatsapp';
 import { calculateYer, formatPriceYer } from '@/lib/currency';
 import { addCart, commerceCopy, type CatalogItem, type Offer } from '@/data/commerce';
 import ProductImage from '@/components/shop/ProductImage';
@@ -157,7 +158,7 @@ function MiniCountdown({ endsAt, compact = false }: { endsAt: string; compact?: 
 export default function OffersPage() {
   const { language } = useLanguage();
   const ar = language === 'ar';
-  const { products: allCatalogProducts, bundles, site } = useCatalog();
+  const { products: allCatalogProducts, bundles, site, categories } = useCatalog();
   const exchangeRate = useExchangeRate();
 
   useEffect(() => {
@@ -337,8 +338,8 @@ export default function OffersPage() {
     const msg = ar
       ? `مرحباً، أستفسر عن عرض التخفيض الخاص بالجهاز:\n${title}\nالسعر بالعرض: ${priceText}\nهل لا زال العرض متوفراً؟`
       : `Hello, I'm inquiring about the discounted deal on:\n${title}\nDeal Price: ${priceText}\nIs this offer still active?`;
-    const phone = site?.whatsapp || '967771001044';
-    window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+    const phone = whatsappPhoneForCategory(categories, product.category, site?.whatsapp);
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   // Filtered & Sorted Products

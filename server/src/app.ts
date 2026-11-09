@@ -204,7 +204,7 @@ export async function buildApp(config: AppConfig, db: PrismaClient, options: { d
       try {
         const html = await renderSeoHtml({
           distRoot: spaRoots.root,
-          path,
+          path: request.url,
           request,
           config,
           db,

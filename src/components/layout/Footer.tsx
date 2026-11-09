@@ -41,6 +41,8 @@ export default function Footer() {
     id: c.slug,
     label: c.title[language] || c.title.ar
   }))
+  const footerCategories = categories.slice(0, 8)
+  const remainingCategories = categories.length - footerCategories.length
 
   const storePhone = siteData.phone || ''
   const storeWhatsapp = siteData.whatsapp || ''
@@ -133,7 +135,7 @@ export default function Footer() {
                     {t.shop.allCategories}
                   </Link>
                 </li>
-                {categories.map((c) => (
+                {footerCategories.map((c) => (
                   <li key={c.id}>
                     <Link
                       to={`/${language}/shop/${c.id}`}
@@ -143,6 +145,16 @@ export default function Footer() {
                     </Link>
                   </li>
                 ))}
+                {remainingCategories > 0 && (
+                  <li>
+                    <Link
+                      to={`/${language}/shop`}
+                      className="text-purple-700 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300 font-semibold transition-colors"
+                    >
+                      {isAr ? `عرض ${remainingCategories} فئة أخرى` : `View ${remainingCategories} more categories`}
+                    </Link>
+                  </li>
+                )}
               </ul>
             </div>
           </div>

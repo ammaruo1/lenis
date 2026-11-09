@@ -569,6 +569,7 @@ model AnalyticsDaily {
 model CatalogCategory {
   slug String @id @db.VarChar(100)
   title Json @db.Json
+  whatsapp String? @db.VarChar(16)
   sort Int @default(0)
   parentSlug String? @db.VarChar(100)
   parent CatalogCategory? @relation("categoryTree", fields: [parentSlug], references: [slug], onDelete: Restrict)

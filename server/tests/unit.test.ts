@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { can, roles, permissions, permissionTable, PasswordSchema, StaffCreateSchema, ProductSchema, normalizeSearch } from '@aljeel/shared';
+import { can, roles, permissions, permissionTable, PasswordSchema, StaffCreateSchema, ProductSchema, normalizeSearch, CategoryEdit } from '@aljeel/shared';
 import { ConfigSchema } from '../src/config.js';
 import { encryptSecret, decryptSecret, hashPassword, verifyPassword, hashToken, randomToken, makeTotp, totpCounter } from '../src/security.js';
+import { whatsappPhoneForCategory, whatsappPhoneForItems } from '../../src/data/whatsapp.js';
 import { readFileSync } from 'node:fs';
 const config = ConfigSchema.parse({ DATABASE_URL: 'mysql://localhost/unit_test', SESSION_SECRET: randomToken(), TOTP_ENCRYPTION_KEY: 'a'.repeat(64), ALLOWED_ORIGINS: 'http://localhost:5174', LOG_LEVEL: 'silent' });
 const expected = {
@@ -31,4 +32,28 @@ describe('shared validation and security primitives', () => {
   it('hashes session tokens and generates unpredictable tokens', () => { const first = randomToken(); expect(first).not.toEqual(randomToken()); expect(hashToken(first)).toMatch(/^[a-f0-9]{64}$/); expect(hashToken(first)).not.toBe(first); });
   it('normalizes Arabic search variants and diacritics', () => { expect(normalizeSearch(' إِدَارَةٌ ')).toBe(normalizeSearch('اداره')); expect(normalizeSearch('آلِيَّة')).toBe(normalizeSearch('الية')); expect(normalizeSearch('مصطفى')).toBe(normalizeSearch('مصطفي')); });
   it('rejects insecure production settings', () => { expect(ConfigSchema.safeParse({ ...config, NODE_ENV: 'production', COOKIE_SECURE: 'false', TRUST_PROXY: 'false', REQUIRE_OWNER_2FA: 'false', ALLOWED_ORIGINS: 'http://localhost' }).success).toBe(false); });
+});
+describe('category WhatsApp routing', () => {
+  const category = { slug: 'accessories', title: { ar: 'الإكسسوارات' }, description: { ar: 'ملحقات' }, parentSlug: null, productTypeId: null, imageId: null, sort: 0, status: 'published' };
+  const categories = [{ slug: 'accessories', whatsapp: '967771000511' }, { slug: 'laptops', whatsapp: null }];
+  const general = '967770001044';
+
+  it.each(['771000511', '0771000511', '+967 771 000 511', '٠٧٧١٠٠٠٥١١'])(
+    'normalizes local and international number %s', phone => expect(CategoryEdit.parse({ ...category, whatsapp: phone }).whatsapp).toBe('967771000511')
+  );
+  it('allows an empty override and rejects malformed numbers', () => {
+    expect(CategoryEdit.parse({ ...category, whatsapp: '' }).whatsapp).toBeNull();
+    expect(CategoryEdit.parse(category).whatsapp).toBeUndefined();
+    expect(CategoryEdit.safeParse({ ...category, whatsapp: '12' }).success).toBe(false);
+  });
+  it('uses the exact category number and falls back to the general number', () => {
+    expect(whatsappPhoneForCategory(categories, 'accessories', general)).toBe('967771000511');
+    expect(whatsappPhoneForCategory(categories, 'laptops', general)).toBe(general);
+  });
+  it('routes a single-category cart by category and mixed or legacy carts to the general number', () => {
+    expect(whatsappPhoneForItems(categories, ['accessories', 'accessories'], general)).toBe('967771000511');
+    expect(whatsappPhoneForItems(categories, ['accessories', 'laptops'], general)).toBe(general);
+    expect(whatsappPhoneForItems(categories, ['accessories', undefined], general)).toBe(general);
+    expect(whatsappPhoneForItems(categories, [], general)).toBe(general);
+  });
 });

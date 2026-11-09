@@ -2,7 +2,7 @@ import {createContext,useContext,useEffect,useState,type ReactNode} from 'react'
 import {z} from 'zod';
 import {ProductsArraySchema,BrandsArraySchema,FAQArraySchema,SiteDataSchema,WarrantyDataSchema,BundlesArraySchema,LocalizedTextSchema} from '@aljeel/shared';
 
-const CatalogSchema=z.object({products:ProductsArraySchema,brands:BrandsArraySchema,faq:FAQArraySchema,site:SiteDataSchema,warranty:WarrantyDataSchema,bundles:BundlesArraySchema,categories:z.array(z.object({slug:z.string(),title:LocalizedTextSchema,parentSlug:z.string().nullable().optional()})),specs:z.array(z.object({key:z.string(),title:LocalizedTextSchema,filterable:z.boolean()})),homeImages:z.record(z.string(),z.string().nullable()).optional().default({}),pricing:z.object({usdToYer:z.string().nullable().optional()}).optional().default({usdToYer:'530'})});
+const CatalogSchema=z.object({products:ProductsArraySchema,brands:BrandsArraySchema,faq:FAQArraySchema,site:SiteDataSchema,warranty:WarrantyDataSchema,bundles:BundlesArraySchema,categories:z.array(z.object({slug:z.string(),title:LocalizedTextSchema,parentSlug:z.string().nullable().optional(),whatsapp:z.string().nullable().optional()})),specs:z.array(z.object({key:z.string(),title:LocalizedTextSchema,filterable:z.boolean()})),homeImages:z.record(z.string(),z.string().nullable()).optional().default({}),pricing:z.object({usdToYer:z.string().nullable().optional()}).optional().default({usdToYer:'530'})});
 type Catalog=z.infer<typeof CatalogSchema>;
 const Context=createContext<Catalog|null>(null);
 export function useCatalog(){const data=useContext(Context);if(!data)throw new Error('Catalog not loaded');return data;}

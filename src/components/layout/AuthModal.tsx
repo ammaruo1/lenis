@@ -4,21 +4,18 @@ import {
   X,
   User,
   Lock,
-  Phone,
   Eye,
   EyeOff,
   CheckCircle2,
   AlertCircle,
-  ShieldCheck,
   Sparkles,
   ArrowRight,
-  ArrowLeft,
-  ShoppingBag,
-  Clock
+  ArrowLeft
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useAuth } from '@/data/AuthContext';
 import { shopApi, errorText, type Customer } from '@/data/commerce';
+import ArabPhoneField, { type ArabCountryId, toE164Phone } from '@/components/commerce/ArabPhoneField';
 
 export default function AuthModal() {
   const { language, dir } = useLanguage();
@@ -35,7 +32,8 @@ export default function AuthModal() {
   const isAr = language === 'ar';
 
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('+967');
+  const [phoneCountry, setPhoneCountry] = useState<ArabCountryId>('YE');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,7 +46,6 @@ export default function AuthModal() {
       setError('');
       setSuccessMsg('');
       setPassword('');
-      if (phone === '') setPhone('+967');
     }
   }, [isAuthModalOpen, authMode]);
 
@@ -56,11 +53,19 @@ export default function AuthModal() {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
+    if (password.length < 4) {
+      setError(isAr ? 'كلمة المرور يجب ألا تقل عن 4 أحرف أو أرقام.' : 'Password must be at least 4 characters.');
+      return;
+    }
+    const cleanPhone = toE164Phone(phoneCountry, phoneNumber);
+    if (!/^\+[1-9]\d{7,14}$/.test(cleanPhone)) {
+      setError(isAr ? 'أدخل رقم الهاتف كاملًا بعد اختيار الدولة.' : 'Enter the full phone number after choosing your country.');
+      return;
+    }
     setLoading(true);
 
     try {
       const endpoint = authMode === 'register' ? '/register' : '/login';
-      const cleanPhone = phone.trim();
       const payload = {
         phone: cleanPhone,
         password,
@@ -89,7 +94,9 @@ export default function AuthModal() {
       }, 1000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
-      setError(errorText(msg, language));
+      setError(msg === 'validation_failed'
+        ? (isAr ? 'تحقق من الاسم ورقم الهاتف وكلمة المرور، ثم حاول مجددًا.' : 'Check the name, phone number and password, then try again.')
+        : errorText(msg, language));
     } finally {
       setLoading(false);
     }
@@ -197,35 +204,29 @@ export default function AuthModal() {
 
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                {isAr ? 'رقم الهاتف (مع الرمز الدولي)' : 'Phone Number (with country code)'}
+                {isAr ? 'الدولة ورقم الهاتف' : 'Country and Phone Number'}
               </label>
-              <div className="relative" dir="ltr">
-                <Phone className="w-4 h-4 absolute top-1/2 -translate-y-1/2 start-3.5 text-gray-400" />
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+967771001044"
-                  className="w-full ps-10 pe-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/70 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-600 text-left font-mono"
-                />
-              </div>
+              <ArabPhoneField language={language} countryId={phoneCountry} onCountryChange={setPhoneCountry} localNumber={phoneNumber} onLocalNumberChange={setPhoneNumber} />
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
                 {isAr
-                  ? 'يُستخدم رقم هاتفك لتأكيد الطلبات وإرسال إشعارات الواتساب.'
-                  : 'Used for order confirmations and WhatsApp tracking.'}
+                  ? 'اختر الدولة ثم اكتب رقمك بدون مفتاح الدولة. يُستخدم لتأكيد الطلبات وإشعارات واتساب.'
+                  : 'Choose your country, then enter your number without its country code.'}
               </p>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                {isAr ? 'كلمة المرور' : 'Password'}
+                {authMode === 'register'
+                  ? (isAr ? 'كلمة المرور (4 أحرف على الأقل)' : 'Password (at least 4 characters)')
+                  : (isAr ? 'كلمة المرور' : 'Password')}
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 absolute top-1/2 -translate-y-1/2 start-3.5 text-gray-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  minLength={4}
+                  maxLength={128}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -240,22 +241,12 @@ export default function AuthModal() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {authMode === 'register' && (
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                  {isAr ? 'استخدم كلمة مرور من اختيارك، بحد أدنى 4 أحرف أو أرقام.' : 'Choose your own password, at least 4 characters long.'}
+                </p>
+              )}
             </div>
-
-            {/* Perks for Register */}
-            {authMode === 'register' && (
-              <div className="p-3.5 rounded-2xl bg-purple-500/5 border border-purple-500/10 space-y-2">
-                <div className="text-[11px] font-bold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-purple-600" />
-                  <span>{isAr ? 'مزايا حسابك لدى الجيل العربي:' : 'Account Perks:'}</span>
-                </div>
-                <div className="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 ps-5 list-disc">
-                  <p>• {isAr ? 'تتبع لحظي للطلبات وحالة الفحص والشحن' : 'Real-time order & inspection tracking'}</p>
-                  <p>• {isAr ? 'حفظ دائم للسلة ومزامنتها عبر كل أجهزتك' : 'Cart sync across all your devices'}</p>
-                  <p>• {isAr ? 'سجل رسمي للضمان وشهادات الفحص بـ 7 نقاط' : 'Official warranty & 7-point certification'}</p>
-                </div>
-              </div>
-            )}
 
             {/* Submit Button */}
             <button

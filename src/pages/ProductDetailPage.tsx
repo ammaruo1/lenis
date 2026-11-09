@@ -41,6 +41,7 @@ import {
 } from '@/data/commerce';
 import '@/commerce.css';
 import { trackProductView, trackWhatsappClick } from '@/analytics';
+import { whatsappPhoneForCategory } from '@/data/whatsapp';
 
 const normalizeProductCopy = (value: string) => value
   .toLocaleLowerCase()
@@ -280,7 +281,7 @@ export default function ProductDetailPage() {
         variantId: currentOffer.variantId,
         ...(currentOffer.unitId ? { unitId: currentOffer.unitId } : {}),
         quantity: 1
-      });
+      }, product ? { category: product.category } : undefined);
       setCartSuccess(true);
       setTimeout(() => setCartSuccess(false), 3500);
     } catch (e) {
@@ -311,41 +312,60 @@ export default function ProductDetailPage() {
     return list;
   }, [currentOffer?.specs, currentOffer?.batteryHealthPct, condName]);
 
-  // Dynamic page title & meta description for client-side SEO / Google / bookmarking
+  // Keep browser and social preview metadata aligned with server-rendered product SEO.
   useEffect(() => {
     if (!product) return;
     const prodTitle = displayProductTitle;
     const siteTitle = language === 'ar' ? 'الجيل العربي الرقمي' : 'Al-Jeel Digital';
+    const pageTitle = language === 'ar'
+      ? `${prodTitle} | ${siteTitle} — صنعاء`
+      : `${prodTitle} | ${siteTitle}, Sana'a`;
+    const yerPrice = currentOffer?.priceUsd ? calculateYer(currentOffer.priceUsd, exchangeRate, currentOffer.priceYer) : null;
+    const yerFormatted = yerPrice ? formatPriceYer(yerPrice, language) : '';
+    const pricePhrase = currentOffer?.priceUsd
+      ? (language === 'ar' ? `السعر: $${currentOffer.priceUsd}${yerFormatted ? ` ${yerFormatted}` : ''}` : `Price: $${currentOffer.priceUsd}${yerFormatted ? ` ${yerFormatted}` : ''}`)
+      : '';
+    const selectedSpecs = [
+      displayProductSummary,
+      ...(specHighlights.length ? [`${language === 'ar' ? 'الحالة والمواصفات' : 'Condition and specs'}: ${specHighlights.join(' | ')}`] : []),
+      pricePhrase,
+    ].filter(Boolean).join('. ');
+    const fullDesc = language === 'ar'
+      ? `${prodTitle} من متجر ${siteTitle} في صنعاء، اليمن.${selectedSpecs ? ` ${selectedSpecs}.` : ''} متجرنا في منتصف شارع صخر، مع توصيل وشحن إلى المحافظات.`
+      : `${prodTitle} from ${siteTitle} in Sana'a, Yemen.${selectedSpecs ? ` ${selectedSpecs}.` : ''} Visit us on Mid-Sakhr Street, with delivery and shipping across the governorates.`;
 
-    document.title = language === 'ar'
-      ? `${prodTitle} في اليمن — مواصفات وسعر | ${siteTitle} صنعاء`
-      : `${prodTitle} in Yemen — Price & Specs | ${siteTitle} Sana'a`;
+    document.title = pageTitle;
+    const updateMeta = (selector: string, content: string) => {
+      document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', content);
+    };
+    updateMeta('meta[name="description"]', fullDesc);
+    updateMeta('meta[property="og:title"]', pageTitle);
+    updateMeta('meta[property="og:description"]', fullDesc);
+    updateMeta('meta[name="twitter:title"]', pageTitle);
+    updateMeta('meta[name="twitter:description"]', fullDesc);
 
-    const descMeta = document.querySelector('meta[name="description"]');
-    if (descMeta) {
-      const yerPrice = currentOffer?.priceUsd ? calculateYer(currentOffer.priceUsd, exchangeRate, currentOffer.priceYer) : null;
-      const yerFormatted = yerPrice ? formatPriceYer(yerPrice, language) : '';
-      const pricePhrase = currentOffer?.priceUsd ? ` ($${currentOffer.priceUsd}${yerFormatted ? ` / ${yerFormatted}` : ''})` : '';
-      const specsPhrase = specHighlights.length > 0 ? ` [${specHighlights.join(' | ')}]` : '';
-      const deliveryPhrase = language === 'ar'
-        ? 'فحص فني شامل وضمان معتمد مع توصيل فوري في صنعاء وشحن لكافة المحافظات اليمنية (عدن، تعز، حضرموت، إب، ذمار، مأرب، الحديدة، وباقي المدن).'
-        : 'Certified inspection & warranty. Fast delivery in Sana\'a and nationwide shipping across all Yemeni governorates (Aden, Taiz, Hadhramaut, Ibb, Marib, etc.).';
-      const summaryText = displayProductSummary;
-      const fullDesc = `${prodTitle} في اليمن${pricePhrase}:${specsPhrase} ${summaryText ? `${summaryText}. ` : ''}${deliveryPhrase}`;
-      descMeta.setAttribute('content', fullDesc);
-    }
-  }, [product, language, currentOffer, specHighlights, exchangeRate, displayProductTitle, displayProductSummary]);
+    const firstImage = product.images[0] || images[0];
+    const imageUrl = firstImage
+      ? (firstImage.startsWith('http') ? firstImage : `${window.location.origin}${firstImage.startsWith('/') ? '' : '/'}${firstImage}`)
+      : `${window.location.origin}/desktop-ar.png`;
+    updateMeta('meta[property="og:image"]', imageUrl);
+    updateMeta('meta[property="og:image:secure_url"]', imageUrl);
+    updateMeta('meta[property="og:image:alt"]', prodTitle);
+    updateMeta('meta[name="twitter:image"]', imageUrl);
+  }, [product, images, language, currentOffer, specHighlights, exchangeRate, displayProductTitle, displayProductSummary]);
 
   const handleShare = async () => {
     if (!product) return;
     const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
     const prodTitle = displayProductTitle;
-    const shareText = `${prodTitle}${currentOffer?.priceUsd ? ` - $${currentOffer.priceUsd}` : ''}`;
+    const shareTitle = document.title || prodTitle;
+    const shareText = document.querySelector<HTMLMetaElement>('meta[name="description"]')?.content
+      || `${prodTitle}${currentOffer?.priceUsd ? ` - $${currentOffer.priceUsd}` : ''}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: prodTitle,
+          title: shareTitle,
           text: shareText,
           url: currentUrl
         });
@@ -363,7 +383,7 @@ export default function ProductDetailPage() {
     }
   };
 
-  const whatsappPhone = site?.whatsapp || '967771001044';
+  const whatsappPhone = whatsappPhoneForCategory(catalogCategories, product?.category, site?.whatsapp);
   const whatsappUrl = useMemo(() => {
     if (!product) return '#';
     const mode = currentOffer?.availabilityMode || 'in_stock';
@@ -735,11 +755,11 @@ export default function ProductDetailPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      {currentOffer?.originalPriceUsd && Number(currentOffer.originalPriceUsd) > Number(currentOffer?.priceUsd)
+                      {currentOffer?.originalPriceUsd && Number(currentOffer.originalPriceUsd) > Number(currentOffer.priceUsd)
                         ? (language === 'ar' ? 'السعر بعد الخصم' : 'Discounted Price')
                         : (language === 'ar' ? 'السعر النقدي' : 'Cash Price')}
                     </span>
-                    {Boolean(currentOffer?.originalPriceUsd && Number(currentOffer.originalPriceUsd) > Number(currentOffer?.priceUsd)) && (
+                    {Boolean(currentOffer?.originalPriceUsd && Number(currentOffer.originalPriceUsd) > Number(currentOffer.priceUsd)) && (
                       <span className="px-2 py-0.5 text-[11px] font-extrabold bg-red-100 text-red-600 dark:bg-red-950/70 dark:text-red-400 rounded-full">
                         {language === 'ar'
                           ? `خصم ${currentOffer?.discountPercent ?? Math.round(((Number(currentOffer!.originalPriceUsd) - Number(currentOffer!.priceUsd)) / Number(currentOffer!.originalPriceUsd)) * 100)}%`
@@ -748,7 +768,7 @@ export default function ProductDetailPage() {
                     )}
                   </div>
 
-                  {Boolean(currentOffer?.originalPriceUsd && Number(currentOffer.originalPriceUsd) > Number(currentOffer?.priceUsd)) && (
+                  {Boolean(currentOffer?.originalPriceUsd && Number(currentOffer.originalPriceUsd) > Number(currentOffer.priceUsd)) && (
                     <div className="flex items-center gap-2 text-neutral-400 dark:text-neutral-500 line-through text-sm font-semibold mb-1">
                       <span dir="ltr">${currentOffer!.originalPriceUsd}</span>
                       {(() => {

@@ -10,6 +10,7 @@ import {transaction} from './db.js';
 import {audit} from './audit.js';
 import {ApiError} from './errors.js';
 import {effectiveFields,validateSpecs,jsonObject,optionIdentity,invalidateCatalogCache} from './commerce-catalog.js';
+import {invalidateBootstrapCache} from './routes-content.js';
 import {changeOrder} from './commerce-cart.js';
 import {couponToDto} from './coupon-service.js';
 import {randomToken,hashToken} from './security.js';
@@ -32,20 +33,65 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
     const q=z.object({q:z.string().max(200).default(''),status:z.enum(['draft','published','archived']).optional(),page:z.coerce.number().int().positive().default(1),sort:z.string().default('updated')}).parse(request.query);
     const sortVal=q.sort.startsWith('name')?'name':'updated';
     const trimmedQ=q.q.trim();
+    const params=new URL(request.url,'http://local').searchParams;
+    const selected=(key:string)=>[...new Set(params.getAll(key).flatMap(value=>value.split(',')).map(value=>value.trim()).filter(Boolean))];
+    const categories=selected('category'),brandIds=selected('brand'),conditions=selected('condition'),collectionIds=selected('collection');
+    const min=params.get('min'),max=params.get('max'),available=params.get('available')==='true';
+    for(const value of [min,max])if(value!==null&&!/^\d{1,12}(\.\d{1,2})?$/.test(value))throw new ApiError(400,'invalid_price');
+    const variantWhere:Prisma.ProductVariantWhereInput={active:true};
+    if(conditions.length)variantWhere.condition={in:conditions as Prisma.EnumConditionFilter['in']};
+    if(available)variantWhere.OR=[
+      {inventoryMode:'quantity',inventoryReviewed:true,quantity:{gt:0}},
+      {units:{some:{available:true}}},
+      {availabilityMode:{in:['local_order','external_order']}}
+    ];
+    const filterClauses:Prisma.ProductWhereInput[]=[];
+    if(min!==null||max!==null){
+      const range={...(min!==null?{gte:new Prisma.Decimal(min)}:{}),...(max!==null?{lte:new Prisma.Decimal(max)}:{})};
+      variantWhere.priceUsd=range;
+    }
+    for(const key of params.keys()){
+      if(!key.startsWith('spec_'))continue;
+      const specKey=key.slice(5);
+      if(!/^[a-zA-Z0-9_-]{1,100}$/.test(specKey))continue;
+      const values=selected(key);
+      if(!values.length)continue;
+      const typedValues=values.flatMap(value=>{
+        const parsed:number[]=[];
+        if(value==='true'||value==='false')return [value==='true',value];
+        if(value.trim()!==''&&Number.isFinite(Number(value)))parsed.push(Number(value));
+        return [...new Set([value,...parsed])];
+      });
+      const specMatches=typedValues.flatMap(value=>[
+        {product:{specs:{path:[specKey],equals:value} as Prisma.JsonFilter}},
+        {specs:{path:[specKey],equals:value} as Prisma.JsonFilter},
+        {options:{path:[specKey],equals:value} as Prisma.JsonFilter}
+      ]);
+      const variantAnd=Array.isArray(variantWhere.AND)?variantWhere.AND:[];
+      variantWhere.AND=[...variantAnd,{OR:specMatches}];
+    }
+    const hasOfferFilters=Boolean(conditions.length||available||min!==null||max!==null||[...params.keys()].some(key=>key.startsWith('spec_')));
+    if(hasOfferFilters)filterClauses.push({variants:{some:variantWhere}});
+    const where:Prisma.ProductWhereInput={
+      deletedAt:null,
+      ...(q.status?{status:q.status}:{}),
+      ...(categories.length?{category:{in:categories}}:{}),
+      ...(brandIds.length?{brandId:{in:brandIds}}:{}),
+      ...(collectionIds.length?{collectionLinks:{some:{collectionId:{in:collectionIds}}}}:{}),
+      ...(filterClauses.length?{AND:filterClauses}:{})
+    };
 
     if(trimmedQ){
       try {
         const param=`%${trimmedQ}%`;
         // استخدام $queryRaw الآمن بدلاً من $queryRawUnsafe لمنع حقن SQL
         // Use safe $queryRaw tagged template instead of $queryRawUnsafe to prevent SQL injection
-        const statusFilter=q.status?Prisma.sql`AND p.status = ${q.status}`:Prisma.empty;
         const matchedRows=await db.$queryRaw<{id:string}[]>(
           Prisma.sql`SELECT DISTINCT p.id 
            FROM Product p
            LEFT JOIN Brand b ON p.brandId = b.id
            LEFT JOIN ProductVariant v ON v.productId = p.id
            WHERE p.deletedAt IS NULL 
-             ${statusFilter}
              AND (
                p.model LIKE ${param} 
                OR p.slug LIKE ${param} 
@@ -58,14 +104,13 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
         if(!matchingIds.length){
           return {items:[],total:0};
         }
-        const where:Prisma.ProductWhereInput={
+        const searchWhere:Prisma.ProductWhereInput={
+          ...where,
           id:{in:matchingIds},
-          deletedAt:null,
-          ...(q.status?{status:q.status}:{})
         };
         const [items,total]=await Promise.all([
-          db.product.findMany({where,include:productInclude,skip:(q.page-1)*24,take:24,orderBy:sortVal==='name'?{model:'asc'}:{updatedAt:'desc'}}),
-          matchingIds.length
+          db.product.findMany({where:searchWhere,include:productInclude,skip:(q.page-1)*24,take:24,orderBy:sortVal==='name'?{model:'asc'}:{updatedAt:'desc'}}),
+          db.product.count({where:searchWhere})
         ]);
         return {items:items.map(p=>productDto(p,true)),total};
       } catch (err) {
@@ -74,7 +119,6 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
       }
     }
 
-    const where:Prisma.ProductWhereInput={deletedAt:null,...(q.status?{status:q.status}:{})};
     const [items,total]=await Promise.all([
       db.product.findMany({where,include:productInclude,skip:(q.page-1)*24,take:24,orderBy:sortVal==='name'?{model:'asc'}:{updatedAt:'desc'}}),
       db.product.count({where})
@@ -93,7 +137,7 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
     // الدفعة 2: استعلامات أثقل للجداول الكبيرة
     // Batch 2: heavier queries
     const [products,variants,collections,packages]=await Promise.all([
-      db.product.findMany({select:{id:true,title:true,model:true,brandId:true,category:true,productTypeId:true,status:true,images:{take:1,include:{media:{select:{originalPath:true}}}}}}),
+      db.product.findMany({select:{id:true,title:true,model:true,brandId:true,category:true,productTypeId:true,status:true,condition:true,specs:true,images:{take:1,include:{media:{select:{originalPath:true}}}}}}),
       db.productVariant.findMany({include:{units:true},orderBy:{sku:'asc'}}),
       db.catalogCollection.findMany({include:{products:true},orderBy:{sort:'asc'}}),
       db.catalogPackage.findMany({include:{items:true}})
@@ -102,7 +146,7 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
   });
   app.post('/commerce/categories',{config:catalog},async request=>{
     const input=CategoryEdit.parse(request.body);
-    return transaction(db,async tx=>{
+    const after=await transaction(db,async tx=>{
       let parent=input.parentSlug;const seen=new Set([input.slug]);
       while(parent){if(seen.has(parent))throw new ApiError(400,'category_cycle');seen.add(parent);const row=await tx.catalogCategory.findUnique({where:{slug:parent}});if(!row)throw new ApiError(400,'unknown_category');parent=row.parentSlug;}
       if(input.productTypeId&&!await tx.productType.findUnique({where:{id:input.productTypeId}}))throw new ApiError(400,'unknown_type');
@@ -112,10 +156,13 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
       const {revision:_r,...data}=input;void _r;
       const after=await tx.catalogCategory.upsert({where:{slug:input.slug},create:data,update:data});await audit(tx,config,request,{action:'category.saved',entity:'CatalogCategory',entityId:input.slug,before,after});return after;
     });
+    invalidateCatalogCache();
+    invalidateBootstrapCache();
+    return after;
   });
   app.delete('/commerce/categories/:slug',{config:catalog},async request=>{
     const slug=(request.params as {slug:string}).slug;
-    return transaction(db,async tx=>{
+    const result=await transaction(db,async tx=>{
       const before=await tx.catalogCategory.findUnique({where:{slug}});
       if(!before)throw new ApiError(404,'not_found');
       if(await tx.product.count({where:{category:slug,deletedAt:null}}))throw new ApiError(400,'category_in_use');
@@ -125,6 +172,9 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
       await audit(tx,config,request,{action:'category.deleted',entity:'CatalogCategory',entityId:slug,before});
       return {ok:true};
     });
+    invalidateCatalogCache();
+    invalidateBootstrapCache();
+    return result;
   });
   app.post('/commerce/types',{config:catalog},async request=>{
     const input=TypeEdit.parse(request.body);
@@ -483,7 +533,7 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
     const discountPct=(origPrice&&price&&Number(origPrice)>Number(price))
       ?new Prisma.Decimal(((Number(origPrice)-Number(price))/Number(origPrice)*100).toFixed(2))
       :null;
-    return transaction(db,async tx=>{
+    const result=await transaction(db,async tx=>{
       const variant=await tx.productVariant.findUniqueOrThrow({where:{id:input.variantId},include:{product:true}});
       // كتابة السعر الأصلي والخصم إلى الأعمدة الحقيقية (وتحديث specs للتوافق مع الكود القديم)
       // Write to real columns + keep specs in sync for backward compatibility
@@ -531,6 +581,8 @@ export async function commerceAdminRoutes(app:FastifyInstance,db:PrismaClient,co
       });
       return {ok:true,variantId:variant.id,priceUsd:price?String(price):null,originalPriceUsd:origPrice?String(origPrice):null};
     });
+    invalidateCatalogCache();
+    return result;
   });
   app.post('/commerce/pricing/batch',{config:{permission:'prices.edit'}},async request=>{
     const input=z.object({

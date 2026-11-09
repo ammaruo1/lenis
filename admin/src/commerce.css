@@ -115,6 +115,65 @@
   gap: 8px;
 }
 
+.product-shop-filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.product-shop-filter-trigger:hover,
+.product-shop-filter-trigger.active { border-color: var(--primary); color: var(--primary); background: var(--surface-soft); }
+.product-shop-filter-trigger b { display: grid; place-items: center; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--primary); color: white; font-size: 10px; }
+.product-shop-filter-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  align-items: start;
+  gap: 12px;
+  flex: 1 0 100%;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.product-shop-filter-panel > header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.product-shop-filter-panel > header strong { font-size: 14px; }
+.product-shop-filter-panel > header button { padding: 5px 8px; border: 0; background: transparent; color: var(--primary); font-size: 12px; font-weight: 700; cursor: pointer; }
+.product-filter-group { min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.product-filter-group h3 { margin: 0 0 8px; color: var(--text); font-size: 12px; font-weight: 800; }
+.product-filter-options { display: grid; gap: 3px; max-height: 205px; overflow: auto; }
+.product-filter-options label { display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 3px 5px; border-radius: 7px; color: var(--text); font-size: 11px; cursor: pointer; }
+.product-filter-options label:hover,
+.product-filter-options label.selected { background: color-mix(in srgb, var(--primary) 8%, var(--surface)); color: var(--primary); }
+.product-filter-options input,
+.product-filter-stock input { width: 15px; height: 15px; margin: 0; accent-color: var(--primary); flex: 0 0 auto; }
+.product-filter-options label span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.product-filter-options small { color: var(--muted); font-size: 10px; }
+.product-filter-options.chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.product-filter-price-range { display: flex; gap: 8px; }
+.product-filter-price-range label { display: grid; gap: 4px; min-width: 0; flex: 1; color: var(--muted); font-size: 10px; font-weight: 700; }
+.product-filter-price-range input { width: 100%; min-width: 0; height: 34px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+.product-filter-stock { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; }
+.product-filter-stock.selected { border-color: var(--primary); color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--surface)); }
+.product-filter-group.specs { grid-column: 1 / -1; }
+.product-filter-spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 7px; }
+.product-filter-spec-grid details { min-width: 0; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.product-filter-spec-grid summary { overflow: hidden; color: var(--text); font-size: 11px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.product-filter-spec-grid .product-filter-options { max-height: 150px; margin-top: 6px; }
+.product-active-filter-chips { display: flex; align-items: center; gap: 6px; flex: 1 0 100%; flex-wrap: wrap; padding-top: 2px; }
+.product-active-filter-chips button { display: inline-flex; align-items: center; gap: 5px; min-height: 27px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font-size: 10px; font-weight: 700; cursor: pointer; }
+.product-active-filter-chips button.clear { color: var(--primary); }
+
 .search-bar-unified {
   display: flex;
   align-items: center;

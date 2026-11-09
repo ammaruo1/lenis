@@ -1,12 +1,12 @@
 import {Prisma,type PrismaClient,type CatalogCategory} from '@prisma/client';
-import {normalizeSearch,CollectionRules,SpecField,type SpecFieldInput,extractProcessorFamily,extractProcessorBrand,extractCpuGen,extractGraphicsInfo,computeLaptopFacets,type NormalizedLaptopItem,type LaptopFacets} from '@aljeel/shared';
+import {normalizeSearch,normalizeSkuCode,isSkuQuery,skuMatchesQuery,CollectionRules,SpecField,type SpecFieldInput,extractProcessorFamily,extractProcessorBrand,extractCpuGen,extractGraphicsInfo,computeLaptopFacets,type NormalizedLaptopItem,type LaptopFacets} from '@aljeel/shared';
 import {z} from 'zod';
 import {productDto} from './catalog-service.js';
 import {ApiError} from './errors.js';
-import {resolveSalePriceUsd,resolveStoreDiscountPercent,resolveStoreOriginalPriceUsd} from './sale-pricing.js';
+import {hasStoreDiscount,resolveSalePriceUsd,resolveStoreDiscountPercent,resolveStoreOriginalPriceUsd} from './sale-pricing.js';
 export const variantInclude={units:true,product:{include:{brand:true,variants:{include:{units:{select:{available:true}}}},images:{orderBy:{sort:'asc' as const},include:{media:{select:{id:true,originalPath:true}}}},compatibleWith:true}}} satisfies Prisma.ProductVariantInclude;
 export type VariantRow=Prisma.ProductVariantGetPayload<{include:typeof variantInclude}>;
-export type Sellable={variantId:string;unitId?:string;sku:string;condition:string;priceUsd:string|null;originalPriceUsd?:string|null;priceYer?:string|null;originalPriceYer?:string|null;discountPercent?:number|null;specs:Record<string,unknown>;images:string[];warrantyMonths:number|null;available:boolean;batteryHealthPct:number|null;inspection:unknown;defects:unknown;availabilityMode?:'in_stock'|'local_order'|'external_order';leadTimeDays?:number|null};
+export type Sellable={variantId:string;unitId?:string;sku:string;condition:string;priceUsd:string|null;originalPriceUsd?:string|null;priceYer?:string|null;originalPriceYer?:string|null;discountPercent?:number|null;discountSource?:'pricing_rule'|'collection';specs:Record<string,unknown>;images:string[];warrantyMonths:number|null;available:boolean;batteryHealthPct:number|null;inspection:unknown;defects:unknown;availabilityMode?:'in_stock'|'local_order'|'external_order';leadTimeDays?:number|null};
 export const jsonObject=(v:unknown):Record<string,unknown>=>v&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 export const imagePaths=(v:unknown):string[]=>Array.isArray(v)?v.filter((s):s is string=>typeof s==='string'):[];
 const searchWords=(value:string)=>normalizeSearch(value).split(/[\s\p{P}\p{S}]+/u).filter(Boolean);
@@ -17,7 +17,7 @@ const searchTokenMatches=(text:string,token:string)=>{
 };
 export const optionIdentity=(options:Record<string,unknown>)=>JSON.stringify(Object.entries(options).sort(([a],[b])=>a.localeCompare(b)).map(([key,value])=>[key,Array.isArray(value)?[...value].sort():value]));
 export const priceInYer=(usd:string|null,rate:Prisma.Decimal|null|undefined)=>usd!==null&&rate?new Prisma.Decimal(usd).mul(rate).toFixed(2):null;
-export function offers(v:VariantRow):Sellable[]{
+export function offers(v:VariantRow,_hasPricingRuleDiscount=false):Sellable[]{
   const parent=jsonObject(v.product.specs),display=jsonObject(parent.display);
   const specs:Record<string,unknown>={...(display.sizeIn!==undefined?{sizeInch:display.sizeIn,screenSize:display.sizeIn}:{}),...(display.touch!==undefined?{touch:display.touch}:{}),...(display.hz!==undefined?{refreshHz:display.hz}:{}),...(display.res!==undefined?{resolution:display.res}:{}),...parent,...jsonObject(v.specs),...jsonObject(v.options)};
   const searchableTitle=[v.product.model,...Object.values(jsonObject(v.product.title))].join(' ');
@@ -59,13 +59,16 @@ export function offers(v:VariantRow):Sellable[]{
   if(specs.capacityGB!==undefined&&specs.storageGB===undefined)specs.storageGB=specs.capacityGB;
   if(specs.hddType&&!specs.storageType)specs.storageType=specs.hddType;
   const priceUsdStr=resolveSalePriceUsd(v,v.product);
-  const originalPriceUsdStr=resolveStoreOriginalPriceUsd(v,v.product);
-  const discountPercent=resolveStoreDiscountPercent(v,v.product);
+  // A product-level pricing edit is a real storefront discount too. Derive
+  // the old price from the price columns instead of requiring a batch-rule row.
+  const hasDiscount=hasStoreDiscount(v,v.product);
+  const originalPriceUsdStr=hasDiscount?resolveStoreOriginalPriceUsd(v,v.product):null;
+  const discountPercent=hasDiscount?resolveStoreDiscountPercent(v,v.product):null;
   delete specs.originalPriceUsd;
   const availMode=((v as Record<string,unknown>).availabilityMode||'in_stock') as 'in_stock'|'local_order'|'external_order';
   const leadTimeDays=((v as Record<string,unknown>).leadTimeDays as number|null|undefined)??(availMode==='local_order'?2:availMode==='external_order'?10:null);
   const isPreorder=availMode==='local_order'||availMode==='external_order';
-  const base={variantId:v.id,sku:v.sku,priceUsd:priceUsdStr,originalPriceUsd:originalPriceUsdStr,discountPercent,specs,images:imagePaths(v.images).length?imagePaths(v.images):v.product.images.map(i=>i.media.originalPath),warrantyMonths:v.warrantyMonths,availabilityMode:availMode,leadTimeDays};
+  const base={variantId:v.id,sku:v.sku,priceUsd:priceUsdStr,originalPriceUsd:originalPriceUsdStr,discountPercent,...(originalPriceUsdStr&&discountPercent?{discountSource:'pricing_rule' as const}:{}),specs,images:imagePaths(v.images).length?imagePaths(v.images):v.product.images.map(i=>i.media.originalPath),warrantyMonths:v.warrantyMonths,availabilityMode:availMode,leadTimeDays};
   if(v.inventoryMode==='serialized')return v.units.filter(u=>u.available).map(u=>({...base,unitId:u.id,condition:u.condition,images:imagePaths(u.images).length?imagePaths(u.images):base.images,available:(v.inventoryReviewed&&v.active)||(isPreorder&&v.active),batteryHealthPct:u.batteryHealthPct,specs:{...base.specs,...(u.batteryHealthPct!==null?{batteryHealthPct:u.batteryHealthPct}:{})},inspection:u.inspection,defects:u.defects}));
   const isAvailable=(v.active&&v.inventoryReviewed&&v.quantity>0)||(isPreorder&&v.active);
   return [{...base,condition:v.condition,available:isAvailable,batteryHealthPct:typeof base.specs.batteryHealthPct==='number'?base.specs.batteryHealthPct:null,inspection:v.product.inspection,defects:[]}];
@@ -147,16 +150,49 @@ export function invalidateCatalogCache() {
 
 async function buildCatalogCache(db: PrismaClient): Promise<CatalogCache> {
   const now = Date.now();
-  const categories = await db.catalogCategory.findMany({ orderBy: { sort: 'asc' } });
+  const [categories, activeDiscountRules] = await Promise.all([
+    db.catalogCategory.findMany({ orderBy: { sort: 'asc' } }),
+    db.priceAdjustmentRule.findMany({
+      where: { action: 'apply_discount', revertedAt: null },
+      select: { items: true, params: true }
+    })
+  ]);
   const allowed = new Set(categories.filter(c => c.status === 'published').map(c => c.slug));
   for (const c of categories) if (c.status !== 'published') for (const slug of descendants(categories, c.slug)) allowed.delete(slug);
   const rows = await db.productVariant.findMany({
     where: { active: true, product: { status: 'published', deletedAt: null, brand: { published: true }, category: { in: [...allowed] } } },
     include: variantInclude,
   });
+  const pricingRuleVariantIds = new Set<string>();
+  const variantsById = new Map(rows.map(v => [v.id, v]));
+  for (const rule of activeDiscountRules) {
+    const params = jsonObject(rule.params);
+    const percent = typeof params.percent === 'number' ? Math.max(1, Math.min(90, params.percent)) : null;
+    if (percent === null || !Array.isArray(rule.items)) continue;
+    for (const rawItem of rule.items) {
+      if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) continue;
+      const snapshot = rawItem as Record<string, unknown>;
+      const variantId = snapshot.variantId;
+      const variant = typeof variantId === 'string' ? variantsById.get(variantId) : undefined;
+      const beforePrice = snapshot.priceUsd === null ? null : Number(snapshot.priceUsd);
+      const beforeOriginal = snapshot.originalPriceUsd === null ? null : Number(snapshot.originalPriceUsd);
+      if (!variant || beforePrice === null || !Number.isFinite(beforePrice)) continue;
+      const anchor = beforeOriginal !== null && Number.isFinite(beforeOriginal) && beforeOriginal > beforePrice
+        ? beforeOriginal
+        : beforePrice;
+      const expectedPrice = new Prisma.Decimal(Math.max(1, Math.round(anchor * (1 - percent / 100))).toFixed(2));
+      const expectedDiscount = new Prisma.Decimal(((anchor - Number(expectedPrice)) / anchor * 100).toFixed(2));
+      const currentOriginal = variant.originalPriceUsd;
+      if (
+        variant.priceUsd?.equals(expectedPrice) &&
+        currentOriginal?.equals(new Prisma.Decimal(anchor.toFixed(2))) &&
+        variant.discountPercent?.equals(expectedDiscount)
+      ) pricingRuleVariantIds.add(variant.id);
+    }
+  }
   const filteredCategories = categories.filter(c => allowed.has(c.slug));
   // Pre-compute entries so we don't rebuild on every request
-  const entries = rows.flatMap(v => offers(v).map(o => ({ v, o })));
+  const entries = rows.flatMap(v => offers(v, pricingRuleVariantIds.has(v.id)).map(o => ({ v, o })));
   // Pre-compute createdAt lookup for O(1) sort instead of O(n) rows.find()
   const createdAtMap = new Map<string, number>();
   for (const r of rows) {
@@ -390,6 +426,7 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
   const category=params.get('category');const allowed=category?descendants(categories,category):null;
   const rawQ = params.get('q')?.trim() ?? '';
   const query = normalizeSearch(rawQ).replace(/اتش\s*بي/g,'hp');
+  const skuQuery = isSkuQuery(rawQ) ? normalizeSkuCode(rawQ) : '';
 
   const queryTokens = query.split(/[\s\p{P}\p{S}]+/u).filter(Boolean);
   const aliases:Record<string,string[]>={
@@ -408,6 +445,7 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
   const matchesQuery=(e:typeof entries[number])=>{
     if(!queryGroups.length)return true;
     const {v,o}=e,p=v.product;
+    if(skuQuery.length>=3&&skuMatchesQuery(o.sku,rawQ))return true;
     const searchable=normalizeSearch([
       JSON.stringify(p.title),
       p.model,
@@ -468,7 +506,21 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
     }
   }
 
-  for(const e of matchedEntries){const id=e.v.productId,p=e.v.product;const fullTitle=normalizeSearch(String(jsonObject(p.title).ar??''));const model=normalizeSearch(p.model);const brand=normalizeSearch(p.brand.name);const exactBrand=brand===query;const categoryIntent=queryTokens.some(token=>({laptops:['laptop','لابتوب','لابتوبات','notebook','thinkpad'],desktops:['desktop','كمبيوتر','مكتبي'],displays:['monitor','display','شاشة','شاشات'],monitors:['monitor','display','شاشة','شاشات'],storage:['storage','ssd','هارد','تخزين','فلاش'], 'hard-drives':['storage','ssd','هارد','تخزين','فلاش'],cameras:['camera','كاميرا','كاميرات'],audio:['headphones','headphone','سماعة','سماعات','صوتيات']}[p.category]??[]).includes(token));const primaryBrandCategory=p.category==='laptops'?1400:['desktops','displays','monitors','storage','hard-drives'].includes(p.category)?250:0;const intentBoost=categoryIntent?1600:0;const searchRank=query?((fullTitle.includes(query)?500:0)+(model.includes(query)?450:0)+(brand===query?350:brand.includes(query)?180:0)+(exactBrand?primaryBrandCategory:0)+intentBoost+queryTokens.reduce((score,token)=>score+(fullTitle.includes(token)?40:model.includes(token)?35:brand.includes(token)?25:0),0)):0;const item=grouped.get(id)??{product:productDto(p),brandId:p.brandId,offers:[],fields:fieldsFor(e.v),searchRank};item.searchRank=Math.max(item.searchRank,searchRank);item.offers.push({...e.o,priceYer:priceInYer(e.o.priceUsd,pricing?.usdToYer),originalPriceYer:priceInYer(e.o.originalPriceUsd??null,pricing?.usdToYer)});grouped.set(id,item);}
+  for(const e of matchedEntries){
+    const id=e.v.productId,p=e.v.product;
+    const fullTitle=normalizeSearch(String(jsonObject(p.title).ar??''));
+    const model=normalizeSearch(p.model),brand=normalizeSearch(p.brand.name),exactBrand=brand===query;
+    const categoryIntent=queryTokens.some(token=>({laptops:['laptop','لابتوب','لابتوبات','notebook','thinkpad'],desktops:['desktop','كمبيوتر','مكتبي'],displays:['monitor','display','شاشة','شاشات'],monitors:['monitor','display','شاشة','شاشات'],storage:['storage','ssd','هارد','تخزين','فلاش'], 'hard-drives':['storage','ssd','هارد','تخزين','فلاش'],cameras:['camera','كاميرا','كاميرات'],audio:['headphones','headphone','سماعة','سماعات','صوتيات']}[p.category]??[]).includes(token));
+    const primaryBrandCategory=p.category==='laptops'?1400:['desktops','displays','monitors','storage','hard-drives'].includes(p.category)?250:0;
+    const intentBoost=categoryIntent?1600:0;
+    const sku=normalizeSkuCode(e.o.sku);
+    const skuRank=skuQuery.length>=3?(sku===skuQuery?5000:sku.startsWith(skuQuery)?4000:sku.includes(skuQuery)?3000:0):0;
+    const searchRank=skuRank+(query?((fullTitle.includes(query)?500:0)+(model.includes(query)?450:0)+(brand===query?350:brand.includes(query)?180:0)+(exactBrand?primaryBrandCategory:0)+intentBoost+queryTokens.reduce((score,token)=>score+(fullTitle.includes(token)?40:model.includes(token)?35:brand.includes(token)?25:0),0)):0);
+    const item=grouped.get(id)??{product:productDto(p),brandId:p.brandId,offers:[],fields:fieldsFor(e.v),searchRank};
+    item.searchRank=Math.max(item.searchRank,searchRank);
+    item.offers.push({...e.o,priceYer:priceInYer(e.o.priceUsd,pricing?.usdToYer),originalPriceYer:priceInYer(e.o.originalPriceUsd??null,pricing?.usdToYer)});
+    grouped.set(id,item);
+  }
   const items=[...grouped.values()];
   const minPrice=(x:typeof items[number])=>Math.min(...x.offers.filter(o=>o.priceUsd!==null&&o.available&&(o.availabilityMode??'in_stock')==='in_stock').map(o=>Number(o.priceUsd)),...x.offers.filter(o=>o.priceUsd!==null).map(o=>Number(o.priceUsd)),Infinity);
   const sort=params.get('sort')??(query?'relevance':'newest');
@@ -488,6 +540,45 @@ export async function catalogSearch(db:PrismaClient,params:URLSearchParams){
     // "newest" sort: use pre-computed createdAtMap for O(1) lookup instead of O(n) rows.find()
     return (createdAtMap.get(b.product.id)??0)-(createdAtMap.get(a.product.id)??0);
   });
+
+  // In the unfiltered "All" view, spread newly added products across the
+  // top-level categories before pagination so one busy section cannot fill the
+  // whole first page. Preserve each category's selected sort order.
+  if (!category && !query && sort === 'newest') {
+    const categoryBySlug = new Map(categories.map(c => [c.slug, c]));
+    const rootCategory = (slug: string) => {
+      let current = categoryBySlug.get(slug);
+      const visited = new Set<string>();
+      while (current?.parentSlug && categoryBySlug.has(current.parentSlug) && !visited.has(current.slug)) {
+        visited.add(current.slug);
+        current = categoryBySlug.get(current.parentSlug);
+      }
+      return current?.slug ?? slug;
+    };
+    const itemsByRoot = new Map<string, typeof items>();
+    for (const item of items) {
+      const root = rootCategory(item.product.category);
+      const bucket = itemsByRoot.get(root) ?? [];
+      bucket.push(item);
+      itemsByRoot.set(root, bucket);
+    }
+    const roots = [
+      ...categories.filter(c => !c.parentSlug).map(c => c.slug).filter(slug => itemsByRoot.has(slug)),
+      ...[...itemsByRoot.keys()].filter(slug => !categories.some(c => !c.parentSlug && c.slug === slug)),
+    ];
+    const diversified: typeof items = [];
+    for (let index = 0; ; index++) {
+      let added = false;
+      for (const root of roots) {
+        const item = itemsByRoot.get(root)?.[index];
+        if (!item) continue;
+        diversified.push(item);
+        added = true;
+      }
+      if (!added) break;
+    }
+    items.splice(0, items.length, ...diversified);
+  }
 
   // ── Optimized facet computation ──
   // Uses the matched entries set and only re-checks entries NOT matching the skipped dimension.
@@ -564,15 +655,16 @@ export async function catalogSuggestions(db:PrismaClient,queryInput:string,langu
   const query=normalizeSearch(queryInput.trim()).replace(/اتش\s*بي/g,'hp');
   if(query.length<2)return {items:[],categories:[]};
   const terms=query.replace(/اتش\s*بي/g,'hp').split(/[\s\p{P}\p{S}]+/u).filter(Boolean);
+  const skuQuery=isSkuQuery(queryInput)?normalizeSkuCode(queryInput):'';
   const aliases:Record<string,string[]>={'فلاش':['flash'],'فلاشه':['flash'],'flash':['فلاش','فلاشه'],'لينوفو':['lenovo'],'lenovo':['لينوفو'],'ثينكباد':['thinkpad'],'thinkpad':['ثينكباد'],'ديل':['dell'],'dell':['ديل'],'اتشبي':['hp'],'hp':['اتشبي'],'لابتوب':['laptop'],'laptop':['لابتوب']};
   const cache=await publishedRows(db);
   const {rows,categories}=cache;
-  const matches=new Map<string,{row:VariantRow;category:string;shortTitle:string;score:number}>();
+  const matches=new Map<string,{row:VariantRow;category:string;shortTitle:string;score:number;sku:string}>();
   for(const row of rows){
     const p=row.product;
     if(matches.has(p.id))continue;
     const searchable=normalizeSearch([JSON.stringify(p.title),p.model,p.brand.name,p.brandId,row.sku,...imagePaths(p.tags)].join(' '));
-    if(!terms.every(term=>[term,...(aliases[term]??[])].some(candidate=>searchTokenMatches(searchable,candidate))))continue;
+    if(!skuMatchesQuery(row.sku,queryInput)&&!terms.every(term=>[term,...(aliases[term]??[])].some(candidate=>searchTokenMatches(searchable,candidate))))continue;
     const localized=jsonObject(p.title);
     const title=String(localized[language]??localized.ar??p.model);
     const shortTitle=language==='ar'
@@ -583,19 +675,21 @@ export async function catalogSuggestions(db:PrismaClient,queryInput:string,langu
     // A brand-only query should surface the brand's main products before docks,
     // cables, and other accessories, while product/model matches remain ranked normally.
     const primaryCategoryBoost=exactBrand&&['laptops','desktops','displays','monitors'].includes(p.category)?200:0;
-    const score=(normalizeSearch(shortTitle).startsWith(query)?100:0)+(exactBrand?50:0)+productCategoryWeight+primaryCategoryBoost;
-    matches.set(p.id,{row,category:p.category,shortTitle,score});
+    const sku=normalizeSkuCode(row.sku);
+    const skuScore=skuQuery.length>=3?(sku===skuQuery?5000:sku.startsWith(skuQuery)?4000:sku.includes(skuQuery)?3000:0):0;
+    const score=skuScore+(normalizeSearch(shortTitle).startsWith(query)?100:0)+(exactBrand?50:0)+productCategoryWeight+primaryCategoryBoost;
+    matches.set(p.id,{row,category:p.category,shortTitle,score,sku:row.sku});
   }
   const sorted=[...matches.entries()].sort((a,b)=>b[1].score-a[1].score||b[1].row.product.createdAt.getTime()-a[1].row.product.createdAt.getTime());
   const categoryCounts=new Map<string,Set<string>>();
   for(const [id,item] of sorted){if(!categoryCounts.has(item.category))categoryCounts.set(item.category,new Set());categoryCounts.get(item.category)!.add(id);}
   const categoryMap=new Map(categories.map(category=>[category.slug,category]));
-  const suggestions=new Map<string,{value:string;category:string;categoryTitle:string;count:number}>();
+  const suggestions=new Map<string,{value:string;category:string;categoryTitle:string;count:number;sku:string}>();
   for(const [id,item] of sorted){
     const category=categoryMap.get(item.category);
     const title=String(jsonObject(category?.title??{})[language]??item.category);
     const key=normalizeSearch(item.shortTitle);
-    if(!suggestions.has(key))suggestions.set(key,{value:item.shortTitle,category:item.category,categoryTitle:title,count:categoryCounts.get(item.category)?.size??1});
+    if(!suggestions.has(key))suggestions.set(key,{value:item.shortTitle,category:item.category,categoryTitle:title,count:categoryCounts.get(item.category)?.size??1,sku:item.sku});
     if(suggestions.size>=8)break;
   }
   return {
@@ -613,7 +707,13 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
   const rules = CollectionRules.parse(collection.rules);
   if (rules.endsAt && new Date(rules.endsAt).getTime() <= Date.now()) throw new ApiError(404, 'not_found');
   const cache = await publishedRows(db);
-  const { rows, categories } = cache;
+  const { rows, entries, categories } = cache;
+  const offersByVariant = new Map<string, Sellable[]>();
+  for (const entry of entries) {
+    const list = offersByVariant.get(entry.v.id) ?? [];
+    list.push(entry.o);
+    offersByVariant.set(entry.v.id, list);
+  }
   const aux = await getAuxData(db, categories);
   const { types, pricing, fieldsByCategory } = aux;
 
@@ -625,7 +725,7 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
   const matchedRows = collection.mode === 'manual'
     ? rows.filter(r => collection.products.some(p => p.productId === r.productId))
     : rows.filter(r => {
-        const offList = offers(r);
+        const offList = offersByVariant.get(r.id) ?? [];
         return offList.some(o => ruleMatches(collection.rules, r, o, categories));
       });
 
@@ -633,13 +733,14 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
     if (!rules.discountPct || !o.priceUsd) return o;
     const base = new Prisma.Decimal(o.priceUsd);
     const discounted = base.mul(100 - rules.discountPct).div(100).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
-    const orig = o.originalPriceUsd ?? o.priceUsd;
+    const orig = o.discountSource === 'pricing_rule' ? (o.originalPriceUsd ?? o.priceUsd) : o.priceUsd;
     const pct = Math.round(((Number(orig) - Number(discounted.toFixed(2))) / Number(orig)) * 100);
     return {
       ...o,
       originalPriceUsd: orig,
       priceUsd: discounted.toFixed(2),
       discountPercent: pct > 0 ? pct : o.discountPercent,
+      ...(pct > 0 ? {discountSource: 'collection' as const} : {}),
     };
   };
 
@@ -654,7 +755,7 @@ export async function getCollectionBySlug(db: PrismaClient, slug: string) {
         fields: fieldsFor(r)
       });
     }
-    const offList = offers(r)
+    const offList = (offersByVariant.get(r.id) ?? [])
       .filter(o => o.available)
       .map(o => applyCollectionDiscount(o))
       .map(o => ({

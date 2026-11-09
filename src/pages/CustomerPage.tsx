@@ -5,7 +5,6 @@ import {
   ShoppingBag,
   LogOut,
   Lock,
-  Phone,
   ArrowRight,
   ArrowLeft,
   Clock,
@@ -19,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { CUSTOMER_PASSWORD_MIN } from '@aljeel/shared';
+import ArabPhoneField, { type ArabCountryId, toE164Phone } from '@/components/commerce/ArabPhoneField';
 import {
   shopApi,
   syncCartFromServer,
@@ -41,7 +41,8 @@ export default function CustomerPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('+967');
+  const [phoneCountry, setPhoneCountry] = useState<ArabCountryId>('YE');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -63,12 +64,21 @@ export default function CustomerPage() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < CUSTOMER_PASSWORD_MIN) {
+      setError(language === 'ar' ? 'كلمة المرور يجب ألا تقل عن 4 أحرف أو أرقام.' : 'Password must be at least 4 characters.');
+      return;
+    }
+    const fullPhone = toE164Phone(phoneCountry, phoneNumber);
+    if (!/^\+[1-9]\d{7,14}$/.test(fullPhone)) {
+      setError(language === 'ar' ? 'أدخل رقم الهاتف كاملًا بعد اختيار الدولة.' : 'Enter your full phone number after choosing your country.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
       const endpoint = isRegister ? '/register' : '/login';
       const payload = {
-        phone: phone.trim(),
+        phone: fullPhone,
         password,
         ...(isRegister ? { name: name.trim() } : {})
       };
@@ -374,25 +384,12 @@ export default function CustomerPage() {
             )}
 
             <div>
-              <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                {t.phone}
-              </label>
-              <div className="relative flex items-center">
-                <Phone className="w-4 h-4 absolute start-3 text-neutral-400 pointer-events-none" />
-                <input
-                  dir="ltr"
-                  type="tel"
-                  required
-                  autoComplete="tel"
-                  pattern="[+][1-9][0-9]{7,14}"
-                  placeholder="+967771001044"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full text-xs py-2.5 ps-9 pe-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-start font-mono"
-                />
-              </div>
+                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
+                  {language === 'ar' ? 'الدولة ورقم الهاتف' : 'Country and phone number'}
+                </label>
+                <ArabPhoneField language={language} countryId={phoneCountry} onCountryChange={setPhoneCountry} localNumber={phoneNumber} onLocalNumberChange={setPhoneNumber} />
               <span className="text-[10px] text-neutral-400 mt-1 block">
-                {language === 'ar' ? 'الرمز الدولي لصنعاء واليمن يبدأ بـ +967' : 'Format with international prefix e.g. +967'}
+                  {language === 'ar' ? 'اختر الدولة ثم اكتب رقمك بدون مفتاح الدولة.' : 'Choose your country, then enter your number without the country code.'}
               </span>
             </div>
 
@@ -414,6 +411,7 @@ export default function CustomerPage() {
                   className="w-full text-xs py-2.5 ps-9 pe-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800"
                 />
               </div>
+              {isRegister && <span className="text-[10px] text-neutral-400 mt-1 block">{language === 'ar' ? '4 أحرف أو أرقام على الأقل.' : 'At least 4 characters.'}</span>}
             </div>
 
             <button

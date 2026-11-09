@@ -25,6 +25,7 @@ import {
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useCatalog, useExchangeRate } from '@/data/CatalogContext';
 import { calculateYer, formatPriceYer } from '@/lib/currency';
+import { whatsappPhoneForCategory } from '@/data/whatsapp';
 import {
   commerceCopy,
   addCart,
@@ -52,7 +53,7 @@ export function Purchase({ item }: { item: CatalogItem }) {
     setBusy(true);
     setError('');
     try {
-      await addCart({ variantId: o.variantId, ...(o.unitId ? { unitId: o.unitId } : {}), quantity: 1 });
+      await addCart({ variantId: o.variantId, ...(o.unitId ? { unitId: o.unitId } : {}), quantity: 1 }, { category: item.product.category });
       setAdded(true);
       setOpen(false);
     } catch (e) {
@@ -157,7 +158,7 @@ export function Purchase({ item }: { item: CatalogItem }) {
 
 export default function CommerceCard({ item, rate, badge }: { item: CatalogItem; rate?: string | null; badge?: 'top' | 'new' | null }) {
   const { language } = useLanguage(), t = commerceCopy[language], p = item.product;
-  const { site } = useCatalog();
+  const { site, categories } = useCatalog();
   const catalogExchangeRate = useExchangeRate();
   const effectiveRate = rate || catalogExchangeRate;
   const [copied, setCopied] = useState(false);
@@ -236,7 +237,7 @@ export default function CommerceCard({ item, rate, badge }: { item: CatalogItem;
     } catch { /* Keep the button responsive if browser storage is unavailable. */ }
   };
 
-  const whatsappPhone = site?.whatsapp ? site.whatsapp.replace(/\D/g, '') : '967771001044';
+  const whatsappPhone = whatsappPhoneForCategory(categories, p.category, site?.whatsapp);
 
   const whatsappUrl = useMemo(() => {
     const url = getProductUrl();
@@ -379,10 +380,13 @@ export default function CommerceCard({ item, rate, badge }: { item: CatalogItem;
     return chips.slice(0, 4);
   }, [isLaptop, p.category, o?.specs, fields, language]);
 
-  const hasDiscount = Boolean(o?.originalPriceUsd && Number(o.originalPriceUsd) > Number(o?.priceUsd));
+  const hasDiscount = Boolean(o?.originalPriceUsd && Number(o.originalPriceUsd) > Number(o.priceUsd));
   const discountPercent = hasDiscount
     ? (o?.discountPercent ?? Math.round(((Number(o!.originalPriceUsd) - Number(o!.priceUsd)) / Number(o!.originalPriceUsd)) * 100))
     : 0;
+  const savingsUsd = hasDiscount
+    ? (Number(o!.originalPriceUsd) - Number(o!.priceUsd)).toFixed(2).replace(/\.00$/, '')
+    : '0';
 
   return (
     <article className="store-card">
@@ -406,7 +410,9 @@ export default function CommerceCard({ item, rate, badge }: { item: CatalogItem;
         <div className="store-card-badges-row">
           {hasDiscount && (
             <span className="store-discount-badge">
-              {language === 'ar' ? `-${discountPercent}%` : `-${discountPercent}%`}
+              {language === 'ar'
+                ? `خصم ${discountPercent}% · وفّر $${savingsUsd} الآن`
+                : `-${discountPercent}% · Save $${savingsUsd} now`}
             </span>
           )}
 
@@ -479,11 +485,6 @@ export default function CommerceCard({ item, rate, badge }: { item: CatalogItem;
             {hasDiscount && (
               <div className="store-old-price-line">
                 <span className="line-through font-medium" dir="ltr">${o!.originalPriceUsd}</span>
-                <span className="store-save-pill">
-                  {language === 'ar'
-                    ? `وفر $${Math.round(Number(o!.originalPriceUsd) - Number(o!.priceUsd))}`
-                    : `Save $${Math.round(Number(o!.originalPriceUsd) - Number(o!.priceUsd))}`}
-                </span>
               </div>
             )}
             <strong className="store-price-main" dir="ltr">
