@@ -10,6 +10,7 @@ export interface PageMeta {
   description: string;
   imageUrl: string;
   imageAlt?: string;
+  imagePreloadUrl?: string;
   canonicalUrl: string;
   type: 'website' | 'product';
   siteName: string;
@@ -167,6 +168,22 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function merchantProductName(value: unknown, brand: unknown, model: unknown, isAr: boolean): string {
+  const source = String(value ?? '').replace(/\s+/g, ' ').trim()
+    || [brand, model].map(part => String(part ?? '').trim()).filter(Boolean).join(' ')
+    || (isAr ? 'منتج من متجر الجيل العربي الرقمي' : 'Product from Al-Jeel Al-Arabi Digital');
+  // Merchant Center titles are limited to 150 characters. Count Unicode code
+  // points so Arabic characters are not split in the structured data.
+  return Array.from(source).slice(0, 150).join('');
+}
+
+function manufacturerPartNumber(value: unknown): string | undefined {
+  const mpn = String(value ?? '').trim();
+  // Google accepts manufacturer part numbers up to 70 characters. Long freeform
+  // catalog model strings are not reliable MPNs, so omit them instead of lying.
+  return mpn && Array.from(mpn).length <= 70 ? mpn : undefined;
 }
 
 export function getBaseUrl(request: FastifyRequest, config: AppConfig): string {
@@ -457,15 +474,16 @@ export async function resolveSeoMeta(
           { name: prodTitle, url: canonicalUrl },
         ]);
 
+        const offerStart = product.priceUpdatedAt ?? product.publishedAt;
         const productSchema = {
           '@context': 'https://schema.org',
           '@type': 'Product',
           '@id': `${canonicalUrl}#product`,
-          name: prodTitle,
+          name: merchantProductName(prodTitle, product.brand?.name, product.model, isAr),
           description: pageDescription,
           image: allImages.length > 0 ? allImages : [imageUrl],
           sku: product.variants[0]?.sku || product.model || String(product.id),
-          mpn: product.model,
+          ...(manufacturerPartNumber(product.model) ? { mpn: manufacturerPartNumber(product.model) } : {}),
           brand: {
             '@type': 'Brand',
             name: product.brand?.name || siteName,
@@ -474,8 +492,8 @@ export async function resolveSeoMeta(
           offers: {
             '@type': 'Offer',
             priceCurrency: 'USD',
-            price: priceVal ? String(priceVal) : '0',
-            priceValidUntil: '2027-12-31',
+            price: String(priceVal),
+            ...(offerStart ? { validFrom: offerStart.toISOString().slice(0, 10) } : {}),
             url: canonicalUrl,
             itemCondition: getSchemaCondition(product.variants[0]?.condition || product.condition),
             availability: product.variants.length > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
@@ -496,7 +514,14 @@ export async function resolveSeoMeta(
           siteName,
           locale: isAr ? 'ar_YE' : 'en_US',
           keywords,
-          structuredData: [productSchema, breadcrumbs, sellerSchema],
+          imagePreloadUrl: (product.variants[0]?.images?.[0]
+            ? (String(product.variants[0].images[0]).startsWith('http') ? String(product.variants[0].images[0]) : `${baseUrl}${String(product.variants[0].images[0]).startsWith('/') ? '' : '/'}${String(product.variants[0].images[0])}`)
+            : imageUrl),
+          structuredData: [
+            ...(priceVal !== null && priceVal !== undefined ? [productSchema] : []),
+            breadcrumbs,
+            sellerSchema,
+          ],
         };
       }
     }
@@ -666,21 +691,11 @@ export async function resolveSeoMeta(
               '@type': 'ListItem',
               position: index + 1,
               item: {
-                '@type': 'Product',
+                '@type': 'Thing',
                 name: productTitle,
                 description: String((item.product.summary as Record<string, unknown>)[lang] || (item.product.summary as Record<string, unknown>).ar || ''),
-                brand: { '@type': 'Brand', name: item.product.brand },
                 url: `${baseUrl}/${lang}/shop/${item.product.category}/${item.product.slug}`,
                 ...(image ? { image: image.startsWith('http') ? image : `${baseUrl}${image.startsWith('/') ? '' : '/'}${image}` } : {}),
-                ...(item.offers.find(offer => offer.priceUsd !== null) ? {
-                  offers: {
-                    '@type': 'Offer',
-                    priceCurrency: 'USD',
-                    price: item.offers.find(offer => offer.priceUsd !== null)!.priceUsd,
-                    availability: item.offers.some(offer => offer.available) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-                    url: `${baseUrl}/${lang}/shop/${item.product.category}/${item.product.slug}`,
-                  },
-                } : {}),
               },
             };
           }),
@@ -864,11 +879,15 @@ export function injectSeoMeta(templateHtml: string, meta: PageMeta): string {
     <meta name="twitter:image" content="${escapeHtml(meta.imageUrl)}" />${structuredDataTag}
 `;
 
+  const imagePreloadTag = meta.type === 'product' && meta.imagePreloadUrl
+    ? `<link rel="preload" as="image" href="${escapeHtml(meta.imagePreloadUrl)}" fetchpriority="high" />\n    `
+    : '';
+
   // Inject right after <head> or before </head>
   if (html.includes('</head>')) {
-    html = html.replace('</head>', `${metaTags}\n  </head>`);
+    html = html.replace('</head>', `${imagePreloadTag}${metaTags}\n  </head>`);
   } else {
-    html = `${metaTags}\n${html}`;
+    html = `${imagePreloadTag}${metaTags}\n${html}`;
   }
 
   return html;

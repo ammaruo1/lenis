@@ -15,7 +15,7 @@ export function productDto(p:Row,admin=false){
   const origColumn=p.originalPriceUsd?Number(p.originalPriceUsd):null;
   const origUsd=admin&&origColumn&&publicUsdNum&&origColumn>publicUsdNum?origColumn:null;
   const discPct=origUsd&&publicUsdNum?Math.round(((origUsd-publicUsdNum)/origUsd)*100):null;
-  return {id:p.id,slug:p.slug,category:p.category,brand:p.brand?.name??'',model:p.model,title:p.title,summary:p.summary,condition:p.condition,warrantyMonths:p.warrantyMonths,
+  return {id:p.id,slug:p.slug,category:p.category,brand:p.brand?.name??'',model:p.model,title:p.title,summary:p.summary,condition:p.condition,warrantyMonths:p.warrantyMonths,publishedAt:p.publishedAt?.toISOString()??null,
     price:{
       usd:admin?p.priceUsd?.toFixed(2)??null:publicUsdNum,
       originalUsd:origUsd,

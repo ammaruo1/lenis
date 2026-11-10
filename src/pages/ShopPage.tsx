@@ -175,21 +175,11 @@ export default function ShopPage({ initialCategory }: { initialCategory?: string
               '@type': 'ListItem',
               position: index + 1,
               item: {
-                '@type': 'Product',
+                '@type': 'Thing',
                 name: localized,
                 description: item.product.summary[language] || item.product.summary.ar,
-                brand: { '@type': 'Brand', name: item.product.brand },
                 url: `${origin}/${language}/shop/${item.product.category}/${item.product.slug}`,
                 ...(image ? { image: image.startsWith('http') ? image : `${origin}${image.startsWith('/') ? '' : '/'}${image}` } : {}),
-                ...(item.offers.find(offer => offer.priceUsd !== null) ? {
-                  offers: {
-                    '@type': 'Offer',
-                    priceCurrency: 'USD',
-                    price: item.offers.find(offer => offer.priceUsd !== null)?.priceUsd,
-                    availability: item.offers.some(offer => offer.available) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-                    url: `${origin}/${language}/shop/${item.product.category}/${item.product.slug}`,
-                  },
-                } : {}),
               },
             };
           }),

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useCatalog, useExchangeRate } from '@/data/CatalogContext';
+import { loadProduct } from '@/data/product-prefetch';
 import { calculateYer, formatPriceYer } from '@/lib/currency';
 import BreadcrumbNav from '@/components/shop/BreadcrumbNav';
 import {
@@ -108,7 +109,7 @@ export default function ProductDetailPage() {
     setError('');
     setLoading(true);
 
-    shopApi<CatalogItem>(`/products/${slug}?category=${encodeURIComponent(category ?? '')}`)
+    loadProduct(category ?? '', slug)
       .then((data) => {
         if (active) {
           setItem(data);
@@ -465,14 +466,20 @@ export default function ProductDetailPage() {
       { ar: 'سقطرى', en: 'Socotra' },
     ];
 
+    if (currentOffer?.priceUsd === null || currentOffer?.priceUsd === undefined) return null;
+
+    const rawSchemaName = (isAr ? `${prodTitle} في اليمن` : `${prodTitle} in Yemen`).replace(/\s+/g, ' ').trim();
+    const schemaName = Array.from(rawSchemaName || `${product.brand} ${product.model}`.trim() || (isAr ? 'منتج من متجر الجيل العربي الرقمي' : 'Product from Al-Jeel Al-Arabi Digital')).slice(0, 150).join('');
+    const schemaMpn = String(product.model || '').trim();
+
     return {
       '@context': 'https://schema.org',
       '@type': 'Product',
-      name: isAr ? `${prodTitle} في اليمن` : `${prodTitle} in Yemen`,
+      name: schemaName,
       description: displayProductSummary || prodTitle,
       image: images.map((img) => (img.startsWith('http') ? img : `${origin}${img.startsWith('/') ? '' : '/'}${img}`)),
       sku: currentOffer?.sku || product.model || String(product.id),
-      mpn: product.model,
+      ...(schemaMpn && Array.from(schemaMpn).length <= 70 ? { mpn: schemaMpn } : {}),
       brand: {
         '@type': 'Brand',
         name: product.brand
@@ -481,8 +488,10 @@ export default function ProductDetailPage() {
       offers: {
         '@type': 'Offer',
         priceCurrency: 'USD',
-        price: currentOffer?.priceUsd || '0',
-        priceValidUntil: '2027-12-31',
+        price: currentOffer.priceUsd,
+        ...(product.price?.updatedAt || product.publishedAt
+          ? { validFrom: (product.price?.updatedAt || product.publishedAt)!.slice(0, 10) }
+          : {}),
         itemCondition: conditionUrl,
         availability: availabilityUrl,
         url: currentUrl,
@@ -684,6 +693,8 @@ export default function ProductDetailPage() {
                     alt={product.title[language]}
                     className="w-full h-full object-contain transition-all duration-500 ease-out group-hover:scale-105"
                     loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
                   />
                 </div>
 
